@@ -526,6 +526,7 @@ class ReplicaManager(val config: KafkaConfig,
         topicPartition -> new PartitionResponse(Errors.INVALID_REQUIRED_ACKS,
           LogAppendInfo.UnknownLogAppendInfo.firstOffset.getOrElse(-1), RecordBatch.NO_TIMESTAMP, LogAppendInfo.UnknownLogAppendInfo.logStartOffset)
       }
+      info("Vai toma no cuuuuuuuuuuuuuuuuuu.")
       responseCallback(responseStatus)
     }
   }
@@ -737,7 +738,7 @@ class ReplicaManager(val config: KafkaConfig,
   }
 
   private def isValidRequiredAcks(requiredAcks: Short): Boolean = {
-    requiredAcks == -1 || requiredAcks == 1 || requiredAcks == 0
+    requiredAcks == -1 || requiredAcks == 1 || requiredAcks == 0 || requiredAcks == -2
   }
 
   /**

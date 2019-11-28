@@ -258,7 +258,7 @@ public class ProducerConfig extends AbstractConfig {
                                 .define(ACKS_CONFIG,
                                         Type.STRING,
                                         "1",
-                                        in("all", "-1", "0", "1"),
+                                        in("all", "-2", "-1", "0", "1", "nack"),
                                         Importance.HIGH,
                                         ACKS_DOC)
                                 .define(COMPRESSION_TYPE_CONFIG, Type.STRING, "none", Importance.HIGH, COMPRESSION_TYPE_DOC)

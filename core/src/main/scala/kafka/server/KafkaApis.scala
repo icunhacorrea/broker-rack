@@ -496,9 +496,9 @@ class KafkaApis(val requestChannel: RequestChannel,
           quotas.request.throttle(request, requestThrottleTimeMs, sendResponse)
         }
       }
-
+      
       // Send the response immediately. In case of throttling, the channel has already been muted.
-      if (produceRequest.acks == 0) {
+      if (produceRequest.acks == 0 || produceRequest.acks == -2) {
         // no operation needed if producer request.required.acks = 0; however, if there is any error in handling
         // the request, since no response is expected by the producer, the server will close socket server so that
         // the producer client will know that some error has happened and will refresh its metadata
@@ -516,6 +516,7 @@ class KafkaApis(val requestChannel: RequestChannel,
           // Note that although request throttling is exempt for acks == 0, the channel may be throttled due to
           // bandwidth quota violation.
           sendNoOpResponseExemptThrottle(request)
+          info("Entrando AQUI CARAIO..")
         }
       } else {
         sendResponse(request, Some(new ProduceResponse(mergedResponseStatus.asJava, maxThrottleTimeMs)), None)
