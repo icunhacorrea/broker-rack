@@ -486,8 +486,9 @@ class KafkaApis(val requestChannel: RequestChannel,
       // Record both bandwidth and request quota-specific values and throttle by muting the channel if any of the quotas
       // have been violated. If both quotas have been violated, use the max throttle time between the two quotas. Note
       // that the request quota is not enforced if acks == 0.
+      // Adição ao if com ack == -2
       val bandwidthThrottleTimeMs = quotas.produce.maybeRecordAndGetThrottleTimeMs(request, numBytesAppended, time.milliseconds())
-      val requestThrottleTimeMs = if (produceRequest.acks == 0) 0 else quotas.request.maybeRecordAndGetThrottleTimeMs(request)
+      val requestThrottleTimeMs = if (produceRequest.acks == 0 || produceRequest.acks == -2) 0 else quotas.request.maybeRecordAndGetThrottleTimeMs(request)
       val maxThrottleTimeMs = Math.max(bandwidthThrottleTimeMs, requestThrottleTimeMs)
       if (maxThrottleTimeMs > 0) {
         if (bandwidthThrottleTimeMs > requestThrottleTimeMs) {
@@ -497,6 +498,8 @@ class KafkaApis(val requestChannel: RequestChannel,
         }
       }
       
+
+      // Adição da mesma opção para produceRequest.acks == -2 (nack)
       // Send the response immediately. In case of throttling, the channel has already been muted.
       if (produceRequest.acks == 0 || produceRequest.acks == -2) {
         // no operation needed if producer request.required.acks = 0; however, if there is any error in handling
@@ -515,8 +518,8 @@ class KafkaApis(val requestChannel: RequestChannel,
         } else {
           // Note that although request throttling is exempt for acks == 0, the channel may be throttled due to
           // bandwidth quota violation.
+          info("Estou entrando aqui [1]")
           sendNoOpResponseExemptThrottle(request)
-          info("Entrando AQUI CARAIO..")
         }
       } else {
         sendResponse(request, Some(new ProduceResponse(mergedResponseStatus.asJava, maxThrottleTimeMs)), None)
@@ -534,6 +537,8 @@ class KafkaApis(val requestChannel: RequestChannel,
     else {
       val internalTopicsAllowed = request.header.clientId == AdminUtils.AdminClientId
 
+      info("Estou entrando aqui [2]")
+
       // call the replica manager to append messages to the replicas
       replicaManager.appendRecords(
         timeout = produceRequest.timeout.toLong,
@@ -543,7 +548,6 @@ class KafkaApis(val requestChannel: RequestChannel,
         entriesPerPartition = authorizedRequestInfo,
         responseCallback = sendResponseCallback,
         recordConversionStatsCallback = processingStatsCallback)
-
       // if the request is put into the purgatory, it will have a held reference and hence cannot be garbage collected;
       // hence we clear its data here in order to let GC reclaim its memory since it is already appended to log
       produceRequest.clearPartitionRecords()

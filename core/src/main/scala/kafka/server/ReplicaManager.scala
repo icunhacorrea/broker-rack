@@ -515,6 +515,7 @@ class ReplicaManager(val config: KafkaConfig,
         delayedProducePurgatory.tryCompleteElseWatch(delayedProduce, producerRequestKeys)
 
       } else {
+        info("Estou entrando aqui [3]")
         // we can respond immediately
         val produceResponseStatus = produceStatus.mapValues(status => status.responseStatus)
         responseCallback(produceResponseStatus)
@@ -526,7 +527,6 @@ class ReplicaManager(val config: KafkaConfig,
         topicPartition -> new PartitionResponse(Errors.INVALID_REQUIRED_ACKS,
           LogAppendInfo.UnknownLogAppendInfo.firstOffset.getOrElse(-1), RecordBatch.NO_TIMESTAMP, LogAppendInfo.UnknownLogAppendInfo.logStartOffset)
       }
-      info("Vai toma no cuuuuuuuuuuuuuuuuuu.")
       responseCallback(responseStatus)
     }
   }
