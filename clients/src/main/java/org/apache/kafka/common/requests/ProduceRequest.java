@@ -317,7 +317,7 @@ public class ProduceRequest extends AbstractRequest {
     @Override
     public ProduceResponse getErrorResponse(int throttleTimeMs, Throwable e) {
         /* In case the producer doesn't actually want any response */
-        if (acks == 0)
+        if (acks == 0 || acks == -2)
             return null;
 
         Errors error = Errors.forException(e);

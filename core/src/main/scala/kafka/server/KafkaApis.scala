@@ -469,6 +469,7 @@ class KafkaApis(val requestChannel: RequestChannel,
       val mergedResponseStatus = responseStatus ++ unauthorizedTopicResponses ++ nonExistingTopicResponses ++ invalidRequestResponses
       var errorInResponse = false
 
+      // Alterou isso aqui para info.
       mergedResponseStatus.foreach { case (topicPartition, status) =>
         if (status.error != Errors.NONE) {
           errorInResponse = true
@@ -518,7 +519,6 @@ class KafkaApis(val requestChannel: RequestChannel,
         } else {
           // Note that although request throttling is exempt for acks == 0, the channel may be throttled due to
           // bandwidth quota violation.
-          info("Estou entrando aqui [1]")
           sendNoOpResponseExemptThrottle(request)
         }
       } else {
@@ -536,8 +536,6 @@ class KafkaApis(val requestChannel: RequestChannel,
       sendResponseCallback(Map.empty)
     else {
       val internalTopicsAllowed = request.header.clientId == AdminUtils.AdminClientId
-
-      info("Estou entrando aqui [2]")
 
       // call the replica manager to append messages to the replicas
       replicaManager.appendRecords(

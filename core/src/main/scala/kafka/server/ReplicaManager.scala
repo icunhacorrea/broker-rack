@@ -515,7 +515,6 @@ class ReplicaManager(val config: KafkaConfig,
         delayedProducePurgatory.tryCompleteElseWatch(delayedProduce, producerRequestKeys)
 
       } else {
-        info("Estou entrando aqui [3]")
         // we can respond immediately
         val produceResponseStatus = produceStatus.mapValues(status => status.responseStatus)
         responseCallback(produceResponseStatus)

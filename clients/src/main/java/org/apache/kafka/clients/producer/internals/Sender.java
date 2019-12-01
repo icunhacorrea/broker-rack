@@ -574,6 +574,7 @@ public class Sender implements Runnable {
         RequestHeader requestHeader = response.requestHeader();
         long receivedTimeMs = response.receivedTimeMs();
         int correlationId = requestHeader.correlationId();
+        System.out.println(response.toString());
         if (response.wasDisconnected()) {
             log.trace("Cancelled request with header {} due to node {} being disconnected",
                 requestHeader, response.destination());
@@ -585,7 +586,8 @@ public class Sender implements Runnable {
             for (ProducerBatch batch : batches.values())
                 completeBatch(batch, new ProduceResponse.PartitionResponse(Errors.UNSUPPORTED_VERSION), correlationId, now, 0L);
         } else {
-            log.trace("Received produce response from node {} with correlation id {}", response.destination(), correlationId);
+            System.out.println("AEEEE CARAIOOOO...");
+            log.info("Received produce response from node {} with correlation id {}", response.destination(), correlationId);
             // if we have a response, parse it
             if (response.hasResponse()) {
                 ProduceResponse produceResponse = (ProduceResponse) response.responseBody();
@@ -800,7 +802,11 @@ public class Sender implements Runnable {
         };
 
         String nodeId = Integer.toString(destination);
-        ClientRequest clientRequest = client.newClientRequest(nodeId, requestBuilder, now, acks != 0,
+        boolean needResponse = false;
+        if(acks == -1 || acks == 1) {
+            needResponse = true;
+        }
+        ClientRequest clientRequest = client.newClientRequest(nodeId, requestBuilder, now, needResponse,
                 requestTimeoutMs, callback);
         client.send(clientRequest, now);
         log.trace("Sent produce request to {}: {}", nodeId, requestBuilder);

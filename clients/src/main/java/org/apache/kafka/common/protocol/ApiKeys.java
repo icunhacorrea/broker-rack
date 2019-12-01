@@ -194,6 +194,7 @@ public enum ApiKeys {
             ElectPreferredLeadersResponseData.SCHEMAS),
     INCREMENTAL_ALTER_CONFIGS(44, "IncrementalAlterConfigs", IncrementalAlterConfigsRequestData.SCHEMAS,
                               IncrementalAlterConfigsResponseData.SCHEMAS);
+    //NACK_REQUEST(45, "NackProduce",)
 
     private static final ApiKeys[] ID_TO_TYPE;
     private static final int MIN_API_KEY = 0;
