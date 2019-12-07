@@ -53,64 +53,7 @@ import org.apache.kafka.common.protocol.types.SchemaException;
 import org.apache.kafka.common.protocol.types.Struct;
 import org.apache.kafka.common.protocol.types.Type;
 import org.apache.kafka.common.record.RecordBatch;
-import org.apache.kafka.common.requests.AddOffsetsToTxnRequest;
-import org.apache.kafka.common.requests.AddOffsetsToTxnResponse;
-import org.apache.kafka.common.requests.AddPartitionsToTxnRequest;
-import org.apache.kafka.common.requests.AddPartitionsToTxnResponse;
-import org.apache.kafka.common.requests.AlterConfigsRequest;
-import org.apache.kafka.common.requests.AlterConfigsResponse;
-import org.apache.kafka.common.requests.AlterReplicaLogDirsRequest;
-import org.apache.kafka.common.requests.AlterReplicaLogDirsResponse;
-import org.apache.kafka.common.requests.ApiVersionsRequest;
-import org.apache.kafka.common.requests.ApiVersionsResponse;
-import org.apache.kafka.common.requests.CreateAclsRequest;
-import org.apache.kafka.common.requests.CreateAclsResponse;
-import org.apache.kafka.common.requests.CreateDelegationTokenRequest;
-import org.apache.kafka.common.requests.CreateDelegationTokenResponse;
-import org.apache.kafka.common.requests.CreatePartitionsRequest;
-import org.apache.kafka.common.requests.CreatePartitionsResponse;
-import org.apache.kafka.common.requests.DeleteAclsRequest;
-import org.apache.kafka.common.requests.DeleteAclsResponse;
-import org.apache.kafka.common.requests.DeleteGroupsRequest;
-import org.apache.kafka.common.requests.DeleteGroupsResponse;
-import org.apache.kafka.common.requests.DeleteRecordsRequest;
-import org.apache.kafka.common.requests.DeleteRecordsResponse;
-import org.apache.kafka.common.requests.DescribeAclsRequest;
-import org.apache.kafka.common.requests.DescribeAclsResponse;
-import org.apache.kafka.common.requests.DescribeConfigsRequest;
-import org.apache.kafka.common.requests.DescribeConfigsResponse;
-import org.apache.kafka.common.requests.DescribeDelegationTokenRequest;
-import org.apache.kafka.common.requests.DescribeDelegationTokenResponse;
-import org.apache.kafka.common.requests.DescribeLogDirsRequest;
-import org.apache.kafka.common.requests.DescribeLogDirsResponse;
-import org.apache.kafka.common.requests.EndTxnRequest;
-import org.apache.kafka.common.requests.EndTxnResponse;
-import org.apache.kafka.common.requests.ExpireDelegationTokenRequest;
-import org.apache.kafka.common.requests.ExpireDelegationTokenResponse;
-import org.apache.kafka.common.requests.FetchRequest;
-import org.apache.kafka.common.requests.FetchResponse;
-import org.apache.kafka.common.requests.LeaderAndIsrRequest;
-import org.apache.kafka.common.requests.LeaderAndIsrResponse;
-import org.apache.kafka.common.requests.ListGroupsRequest;
-import org.apache.kafka.common.requests.ListGroupsResponse;
-import org.apache.kafka.common.requests.ListOffsetRequest;
-import org.apache.kafka.common.requests.ListOffsetResponse;
-import org.apache.kafka.common.requests.OffsetFetchRequest;
-import org.apache.kafka.common.requests.OffsetFetchResponse;
-import org.apache.kafka.common.requests.OffsetsForLeaderEpochRequest;
-import org.apache.kafka.common.requests.OffsetsForLeaderEpochResponse;
-import org.apache.kafka.common.requests.ProduceRequest;
-import org.apache.kafka.common.requests.ProduceResponse;
-import org.apache.kafka.common.requests.RenewDelegationTokenRequest;
-import org.apache.kafka.common.requests.RenewDelegationTokenResponse;
-import org.apache.kafka.common.requests.StopReplicaRequest;
-import org.apache.kafka.common.requests.StopReplicaResponse;
-import org.apache.kafka.common.requests.TxnOffsetCommitRequest;
-import org.apache.kafka.common.requests.TxnOffsetCommitResponse;
-import org.apache.kafka.common.requests.UpdateMetadataRequest;
-import org.apache.kafka.common.requests.UpdateMetadataResponse;
-import org.apache.kafka.common.requests.WriteTxnMarkersRequest;
-import org.apache.kafka.common.requests.WriteTxnMarkersResponse;
+import org.apache.kafka.common.requests.*;
 
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -193,8 +136,8 @@ public enum ApiKeys {
     ELECT_PREFERRED_LEADERS(43, "ElectPreferredLeaders", ElectPreferredLeadersRequestData.SCHEMAS,
             ElectPreferredLeadersResponseData.SCHEMAS),
     INCREMENTAL_ALTER_CONFIGS(44, "IncrementalAlterConfigs", IncrementalAlterConfigsRequestData.SCHEMAS,
-                              IncrementalAlterConfigsResponseData.SCHEMAS);
-    //NACK_REQUEST(45, "NackProduce",)
+                              IncrementalAlterConfigsResponseData.SCHEMAS),
+    NACK_PRODUCE_REQUEST(45, "NackProduce", NackProduceRequest.schemaVersions(), NackProduceResponse.schemaVersions());
 
     private static final ApiKeys[] ID_TO_TYPE;
     private static final int MIN_API_KEY = 0;

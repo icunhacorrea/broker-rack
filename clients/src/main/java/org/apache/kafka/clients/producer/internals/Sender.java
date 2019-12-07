@@ -45,13 +45,7 @@ import org.apache.kafka.common.metrics.stats.Meter;
 import org.apache.kafka.common.protocol.Errors;
 import org.apache.kafka.common.record.MemoryRecords;
 import org.apache.kafka.common.record.RecordBatch;
-import org.apache.kafka.common.requests.AbstractRequest;
-import org.apache.kafka.common.requests.FindCoordinatorRequest;
-import org.apache.kafka.common.requests.InitProducerIdRequest;
-import org.apache.kafka.common.requests.InitProducerIdResponse;
-import org.apache.kafka.common.requests.ProduceRequest;
-import org.apache.kafka.common.requests.ProduceResponse;
-import org.apache.kafka.common.requests.RequestHeader;
+import org.apache.kafka.common.requests.*;
 import org.apache.kafka.common.utils.LogContext;
 import org.apache.kafka.common.utils.Time;
 import org.apache.kafka.common.utils.Utils;
@@ -574,7 +568,6 @@ public class Sender implements Runnable {
         RequestHeader requestHeader = response.requestHeader();
         long receivedTimeMs = response.receivedTimeMs();
         int correlationId = requestHeader.correlationId();
-        System.out.println(response.toString());
         if (response.wasDisconnected()) {
             log.trace("Cancelled request with header {} due to node {} being disconnected",
                 requestHeader, response.destination());
@@ -586,7 +579,6 @@ public class Sender implements Runnable {
             for (ProducerBatch batch : batches.values())
                 completeBatch(batch, new ProduceResponse.PartitionResponse(Errors.UNSUPPORTED_VERSION), correlationId, now, 0L);
         } else {
-            System.out.println("AEEEE CARAIOOOO...");
             log.info("Received produce response from node {} with correlation id {}", response.destination(), correlationId);
             // if we have a response, parse it
             if (response.hasResponse()) {
@@ -755,6 +747,10 @@ public class Sender implements Runnable {
             sendProduceRequest(now, entry.getKey(), acks, requestTimeoutMs, entry.getValue());
     }
 
+    private void handleNackProduceResponse(ClientResponse respone) {
+        log.info("EAE CARAIO IAIHRAIHRAIHIRAIRA");
+    }
+
     /**
      * Create a produce request from the given record batches
      */
@@ -806,6 +802,12 @@ public class Sender implements Runnable {
         if(acks == -1 || acks == 1) {
             needResponse = true;
         }
+        // Se ack for -2, enviar uma request de NackProduce, para depois enviar a produção da mensagem
+        // propriamente dita
+        //if(acks == -2) {
+        //    sendNackProduceRequest((short) 0, acks, requestTimeoutMs, nodeId, transactionalId);
+        //}
+
         ClientRequest clientRequest = client.newClientRequest(nodeId, requestBuilder, now, needResponse,
                 requestTimeoutMs, callback);
         client.send(clientRequest, now);
@@ -824,6 +826,21 @@ public class Sender implements Runnable {
         produceThrottleTimeSensor.add(metrics.produceThrottleTimeAvg, new Avg());
         produceThrottleTimeSensor.add(metrics.produceThrottleTimeMax, new Max());
         return produceThrottleTimeSensor;
+    }
+
+    public void sendNackProduceRequest(short version, short acks, int timeout, String nodeId, String transactionalId) {
+        NackProduceRequest.Builder requestBuilder = new NackProduceRequest.Builder(version,
+                acks, timeout, nodeId, transactionalId);
+        RequestCompletionHandler callback = new RequestCompletionHandler() {
+            @Override
+            public void onComplete(ClientResponse response) {
+                handleNackProduceResponse(response);
+            }
+        };
+        long actualTime = time.milliseconds();
+        ClientRequest clientRequest = client.newClientRequest(nodeId,requestBuilder, actualTime, false,
+                timeout, callback);
+        client.send(clientRequest, actualTime);
     }
 
     /**

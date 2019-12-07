@@ -155,6 +155,7 @@ class KafkaApis(val requestChannel: RequestChannel,
         case ApiKeys.DELETE_GROUPS => handleDeleteGroupsRequest(request)
         case ApiKeys.ELECT_PREFERRED_LEADERS => handleElectPreferredReplicaLeader(request)
         case ApiKeys.INCREMENTAL_ALTER_CONFIGS => handleIncrementalAlterConfigsRequest(request)
+        case ApiKeys.NACK_PRODUCE_REQUEST => handleNackProduceRequest(request)
       }
     } catch {
       case e: FatalExitError => throw e
@@ -423,6 +424,14 @@ class KafkaApis(val requestChannel: RequestChannel,
   private def authorize(session: RequestChannel.Session, operation: Operation, resource: Resource): Boolean =
     authorizer.forall(_.authorize(session, operation, resource))
 
+  /**
+   * Handle NackProduce Request
+   */
+
+  def handleNackProduceRequest(request: RequestChannel.Request) {
+    val nackRequest = request.body[NackProduceRequest]
+    info(nackRequest.toString())
+  }
   /**
    * Handle a produce request
    */

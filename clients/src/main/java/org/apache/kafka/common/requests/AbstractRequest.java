@@ -233,6 +233,8 @@ public abstract class AbstractRequest extends AbstractRequestResponse {
                 return new ElectPreferredLeadersRequest(struct, apiVersion);
             case INCREMENTAL_ALTER_CONFIGS:
                 return new IncrementalAlterConfigsRequest(struct, apiVersion);
+            //case NACK_PRODUCE_REQUEST:
+             //   return new NackProduceRequest(struct, apiVersion);
             default:
                 throw new AssertionError(String.format("ApiKey %s is not currently handled in `parseRequest`, the " +
                         "code should be updated to do so.", apiKey));
