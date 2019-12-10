@@ -429,6 +429,7 @@ class KafkaApis(val requestChannel: RequestChannel,
    */
 
   def handleNackProduceRequest(request: RequestChannel.Request) {
+    info("Caraio")
     val nackRequest = request.body[NackProduceRequest]
     info(nackRequest.toString())
   }

@@ -789,6 +789,8 @@ public class Sender implements Runnable {
         if (transactionManager != null && transactionManager.isTransactional()) {
             transactionalId = transactionManager.transactionalId();
         }
+
+
         ProduceRequest.Builder requestBuilder = ProduceRequest.Builder.forMagic(minUsedMagic, acks, timeout,
                 produceRecordsByPartition, transactionalId);
         RequestCompletionHandler callback = new RequestCompletionHandler() {
@@ -802,11 +804,12 @@ public class Sender implements Runnable {
         if(acks == -1 || acks == 1) {
             needResponse = true;
         }
+
         // Se ack for -2, enviar uma request de NackProduce, para depois enviar a produção da mensagem
         // propriamente dita
-        //if(acks == -2) {
-        //    sendNackProduceRequest((short) 0, acks, requestTimeoutMs, nodeId, transactionalId);
-        //}
+        if(acks == -2) {
+            sendNackProduceRequest((short) 0, acks, requestTimeoutMs, nodeId, transactionalId, now);
+        }
 
         ClientRequest clientRequest = client.newClientRequest(nodeId, requestBuilder, now, needResponse,
                 requestTimeoutMs, callback);
@@ -828,19 +831,21 @@ public class Sender implements Runnable {
         return produceThrottleTimeSensor;
     }
 
-    public void sendNackProduceRequest(short version, short acks, int timeout, String nodeId, String transactionalId) {
+    public void sendNackProduceRequest(short version, short acks, int timeout, String nodeId, String transactionalId,
+                                        long now) {
         NackProduceRequest.Builder requestBuilder = new NackProduceRequest.Builder(version,
-                acks, timeout, nodeId, transactionalId);
+                acks, timeout, Integer.parseInt(nodeId), transactionalId);
         RequestCompletionHandler callback = new RequestCompletionHandler() {
             @Override
             public void onComplete(ClientResponse response) {
                 handleNackProduceResponse(response);
             }
         };
-        long actualTime = time.milliseconds();
-        ClientRequest clientRequest = client.newClientRequest(nodeId,requestBuilder, actualTime, false,
+        System.out.println("NodeId: " + nodeId);
+        System.out.println("Id Transação: " + transactionalId);
+        ClientRequest clientRequest = client.newClientRequest(nodeId,requestBuilder, now, false,
                 timeout, callback);
-        client.send(clientRequest, actualTime);
+        client.send(clientRequest, now);
     }
 
     /**

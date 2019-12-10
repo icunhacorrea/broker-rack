@@ -18,7 +18,7 @@ public class NackProduceRequest extends AbstractRequest {
     private static final Schema NACK_PRODUCE_REQUEST_V0 = new Schema(
             new Field(ACKS_KEY_NAME, INT16, "Ack que que sera utilizado para a produção com nack."),
             new Field(TIMEOUT_KEY_NAME, INT32, "The time to await a response in ms."),
-            new Field(PRODUCER_ID, STRING, "Identification of producer."),
+            new Field(PRODUCER_ID, INT32, "Identification of producer."),
             new Field(TRANSACTIONAL_ID, NULLABLE_STRING, "Transactional id.")
     );
 
@@ -30,10 +30,10 @@ public class NackProduceRequest extends AbstractRequest {
     public static class Builder extends AbstractRequest.Builder<NackProduceRequest> {
         private final short acks;
         private final int timeout;
-        private final String producerId;
+        private final int producerId;
         private final String transactionalId;
 
-        public Builder (short version, short acks, int timeout, String producerId, String transactionalId) {
+        public Builder (short version, short acks, int timeout, int producerId, String transactionalId) {
             super(ApiKeys.NACK_PRODUCE_REQUEST, version);
             this.acks = acks;
             this.timeout = timeout;
@@ -60,11 +60,11 @@ public class NackProduceRequest extends AbstractRequest {
 
     private final short acks;
     private final int timeout;
-    private final String producerId;
+    private final int producerId;
     private final String transactionalId;
 
     private NackProduceRequest(short version, short acks, int timeout,
-                               String producerId, String transactionalId) {
+                               int producerId, String transactionalId) {
         super(ApiKeys.NACK_PRODUCE_REQUEST, version);
         this.acks = acks;
         this.timeout = timeout;
@@ -72,9 +72,14 @@ public class NackProduceRequest extends AbstractRequest {
         this.transactionalId = transactionalId;
     }
     // TODO implementar método contrutor que receba uma struct como parâmetro.
-    //public NackProduceRequest(Struct struct, short version) {
-    //    super(ApiKeys.NACK_PRODUCE_REQUEST, version);
-    //}
+    public NackProduceRequest(Struct struct, short version) {
+        super(ApiKeys.NACK_PRODUCE_REQUEST, version);
+
+        this.acks = struct.getShort(ACKS_KEY_NAME);
+        this.timeout = struct.getInt(TIMEOUT_KEY_NAME);
+        this.producerId = struct.getInt(PRODUCER_ID);
+        this.transactionalId = struct.getString(TRANSACTIONAL_ID);
+    }
 
     @Override
     public Struct toStruct(){
