@@ -432,6 +432,14 @@ class KafkaApis(val requestChannel: RequestChannel,
     info("Caraio")
     val nackRequest = request.body[NackProduceRequest]
     info(nackRequest.toString())
+    // 1⁰ Tentativa de reenviar uma resposta pro client
+
+
+    /** 
+    * 1⁰  Enviar respostas de que servidor entendeu. (  )
+    * 2⁰  Start um relógio pra esperar uma mensagem. (  )
+    */
+    sendResponse(request, Some(new NackProduceResponse(null, nackRequest.timeout, nackRequest.transationalId)), None)
   }
   /**
    * Handle a produce request

@@ -102,6 +102,12 @@ public class NackProduceRequest extends AbstractRequest {
         return null;
     }
 
+    @Override
+    public Map<Errors, Integer> errorCounts(Throwable e) {
+        Errors error = Errors.forException(e);
+        return Collections.singletonMap(error, partitions().size());
+    }
+
     public short acks() {
         return acks;
     }
