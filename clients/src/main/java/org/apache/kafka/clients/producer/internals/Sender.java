@@ -790,7 +790,6 @@ public class Sender implements Runnable {
             transactionalId = transactionManager.transactionalId();
         }
 
-
         ProduceRequest.Builder requestBuilder = ProduceRequest.Builder.forMagic(minUsedMagic, acks, timeout,
                 produceRecordsByPartition, transactionalId);
         RequestCompletionHandler callback = new RequestCompletionHandler() {
@@ -843,7 +842,7 @@ public class Sender implements Runnable {
         };
         System.out.println("NodeId: " + nodeId);
         System.out.println("Id Transação: " + transactionalId);
-        ClientRequest clientRequest = client.newClientRequest(nodeId,requestBuilder, now, false,
+        ClientRequest clientRequest = client.newClientRequest(nodeId,requestBuilder, now, true,
                 timeout, callback);
         client.send(clientRequest, now);
     }

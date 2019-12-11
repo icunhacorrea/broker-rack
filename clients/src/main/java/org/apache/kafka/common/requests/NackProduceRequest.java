@@ -7,6 +7,7 @@ import org.apache.kafka.common.protocol.types.Field;
 import org.apache.kafka.common.protocol.types.Schema;
 import org.apache.kafka.common.protocol.types.Struct;
 
+import static org.apache.kafka.common.protocol.CommonFields.NULLABLE_TRANSACTIONAL_ID;
 import static org.apache.kafka.common.protocol.types.Type.*;
 
 public class NackProduceRequest extends AbstractRequest {
@@ -19,7 +20,7 @@ public class NackProduceRequest extends AbstractRequest {
             new Field(ACKS_KEY_NAME, INT16, "Ack que que sera utilizado para a produção com nack."),
             new Field(TIMEOUT_KEY_NAME, INT32, "The time to await a response in ms."),
             new Field(PRODUCER_ID, INT32, "Identification of producer."),
-            new Field(TRANSACTIONAL_ID, NULLABLE_STRING, "Transactional id.")
+            CommonFields.NULLABLE_TRANSACTIONAL_ID
     );
 
     // If more schemas are implemented
@@ -78,7 +79,7 @@ public class NackProduceRequest extends AbstractRequest {
         this.acks = struct.getShort(ACKS_KEY_NAME);
         this.timeout = struct.getInt(TIMEOUT_KEY_NAME);
         this.producerId = struct.getInt(PRODUCER_ID);
-        this.transactionalId = struct.getString(TRANSACTIONAL_ID);
+        this.transactionalId = struct.getOrElse(NULLABLE_TRANSACTIONAL_ID, null);
     }
 
     @Override
@@ -89,7 +90,7 @@ public class NackProduceRequest extends AbstractRequest {
         struct.set(ACKS_KEY_NAME, acks);
         struct.set(TIMEOUT_KEY_NAME, timeout);
         struct.set(PRODUCER_ID, producerId);
-        struct.set(TRANSACTIONAL_ID, transactionalId);
+        struct.setIfExists(NULLABLE_TRANSACTIONAL_ID, transactionalId);
 
         return struct;
     }
