@@ -749,6 +749,7 @@ public class Sender implements Runnable {
 
     private void handleNackProduceResponse(ClientResponse respone) {
         log.info("EAE CARAIO IAIHRAIHRAIHIRAIRA");
+        return;
     }
 
     /**
@@ -807,7 +808,7 @@ public class Sender implements Runnable {
         // Se ack for -2, enviar uma request de NackProduce, para depois enviar a produção da mensagem
         // propriamente dita
         if(acks == -2) {
-            sendNackProduceRequest((short) 0, acks, requestTimeoutMs, nodeId, transactionalId, now);
+            sendNackProduceRequest((short) 0, acks, timeout, nodeId, transactionalId, now);
         }
 
         ClientRequest clientRequest = client.newClientRequest(nodeId, requestBuilder, now, needResponse,

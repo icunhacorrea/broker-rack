@@ -17,8 +17,9 @@ public class NackProduceResponse extends AbstractResponse {
     private static final String TRANSACTIONAL_ID = "transactional id";
 
     private static final Schema NACK_PRODUCE_REQUEST_V0 = new Schema(
-            new Field(TIMEOUT_KEY_NAME, INT32, "The time to await a response in ms."),
-            new Field(TRANSACTIONAL_ID, NULLABLE_STRING, "Transactional id.")
+        ERROR_CODE,
+        new Field(TIMEOUT_KEY_NAME, INT32, "The time to await a response in ms."),
+        new Field(TRANSACTIONAL_ID, NULLABLE_STRING, "Transactional id.")
     );
 
     // If more schemas are implemented
@@ -30,7 +31,8 @@ public class NackProduceResponse extends AbstractResponse {
     private final int timeout;
     private Errors error;
 
-    public NackProduceResponse(int timeout, String transactionalId) {
+    public NackProduceResponse(Errors error, int timeout, String transactionalId) {
+        this.error = error;
         this.timeout = timeout;
         this.transactionalId = transactionalId;
     }
@@ -56,7 +58,7 @@ public class NackProduceResponse extends AbstractResponse {
 
     @Override
     public Struct toStruct(short version){
-        Struct struct = new Struct(ApiKeys.API_VERSIONS.responseSchema(version));
+        Struct struct = new Struct(ApiKeys.NACK_PRODUCE_REQUEST.responseSchema(version));
         struct.set(TIMEOUT_KEY_NAME, timeout);
         struct.set(TRANSACTIONAL_ID, transactionalId);
         struct.set(ERROR_CODE, error.code());
