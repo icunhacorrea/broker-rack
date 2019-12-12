@@ -7,6 +7,9 @@ import org.apache.kafka.common.protocol.types.Field;
 import org.apache.kafka.common.protocol.types.Schema;
 import org.apache.kafka.common.protocol.types.Struct;
 
+import java.util.Collections;
+import java.util.Map;
+
 import static org.apache.kafka.common.protocol.CommonFields.NULLABLE_TRANSACTIONAL_ID;
 import static org.apache.kafka.common.protocol.types.Type.*;
 
@@ -105,7 +108,7 @@ public class NackProduceRequest extends AbstractRequest {
     @Override
     public Map<Errors, Integer> errorCounts(Throwable e) {
         Errors error = Errors.forException(e);
-        return Collections.singletonMap(error, partitions().size());
+        return Collections.singletonMap(error, 1);
     }
 
     public short acks() {

@@ -6,6 +6,7 @@ import org.apache.kafka.common.protocol.types.Field;
 import org.apache.kafka.common.protocol.types.Schema;
 import org.apache.kafka.common.protocol.types.Struct;
 
+import java.util.Collections;
 import java.util.Map;
 
 import static org.apache.kafka.common.protocol.CommonFields.*;
@@ -14,12 +15,10 @@ import static org.apache.kafka.common.protocol.types.Type.*;
 public class NackProduceResponse extends AbstractResponse {
     private static final String TIMEOUT_KEY_NAME = "timeout";
     private static final String TRANSACTIONAL_ID = "transactional id";
-    private static final String ERROR_CODE = "Codigo de um erro mano, codigo de um erro.";
 
     private static final Schema NACK_PRODUCE_REQUEST_V0 = new Schema(
             new Field(TIMEOUT_KEY_NAME, INT32, "The time to await a response in ms."),
-            new Field(TRANSACTIONAL_ID, NULLABLE_STRING, "Transactional id."),
-            new Field(ERROR_CODE, INT64, "Error code.")
+            new Field(TRANSACTIONAL_ID, NULLABLE_STRING, "Transactional id.")
     );
 
     // If more schemas are implemented
@@ -27,18 +26,17 @@ public class NackProduceResponse extends AbstractResponse {
         return new Schema[] {NACK_PRODUCE_REQUEST_V0};
     }
 
-    private final Errors error;
     private final String transactionalId;
     private final int timeout;
+    private Errors error;
 
-    public NackProduceResponse(Errors error, int timeout, String transactionalId) {
-        this.error = error;
+    public NackProduceResponse(int timeout, String transactionalId) {
         this.timeout = timeout;
         this.transactionalId = transactionalId;
     }
 
     public NackProduceResponse(Struct struct) {
-        this.error = Errors.forCode(struct.getShort(ERROR_CODE));
+        this.error = Errors.forCode(struct.get(ERROR_CODE));
         this.timeout = struct.getInt(TIMEOUT_KEY_NAME);
         this.transactionalId = struct.getString(TRANSACTIONAL_ID);
     }
@@ -53,7 +51,7 @@ public class NackProduceResponse extends AbstractResponse {
 
     @Override
     public Map<Errors, Integer> errorCounts() {
-        return errorCounts(error);
+        return Collections.singletonMap(error(), 1);
     }
 
     @Override

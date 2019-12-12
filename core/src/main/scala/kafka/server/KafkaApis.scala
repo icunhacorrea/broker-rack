@@ -439,7 +439,8 @@ class KafkaApis(val requestChannel: RequestChannel,
     * 1⁰  Enviar respostas de que servidor entendeu. (  )
     * 2⁰  Start um relógio pra esperar uma mensagem. (  )
     */
-    sendResponse(request, Some(new NackProduceResponse(null, nackRequest.timeout, nackRequest.transationalId)), None)
+    //sendResponse(request, None, None)
+    sendResponse(request, Some(new NackProduceResponse(nackRequest.timeout, nackRequest.transationalId)), None)
   }
   /**
    * Handle a produce request
