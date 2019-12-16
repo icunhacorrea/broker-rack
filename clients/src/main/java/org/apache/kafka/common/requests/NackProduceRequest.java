@@ -17,7 +17,6 @@ public class NackProduceRequest extends AbstractRequest {
     private static final String ACKS_KEY_NAME = "acks";
     private static final String TIMEOUT_KEY_NAME = "timeout";
     private static final String PRODUCER_ID = "producerId";
-    private static final String TRANSACTIONAL_ID = "transactionalId";
 
     private static final Schema NACK_PRODUCE_REQUEST_V0 = new Schema(
             new Field(ACKS_KEY_NAME, INT16, "Ack que que sera utilizado para a produção com nack."),
