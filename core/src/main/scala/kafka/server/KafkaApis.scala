@@ -488,7 +488,6 @@ class KafkaApis(val requestChannel: RequestChannel,
       val mergedResponseStatus = responseStatus ++ unauthorizedTopicResponses ++ nonExistingTopicResponses ++ invalidRequestResponses
       var errorInResponse = false
 
-      // Alterou isso aqui para info.
       mergedResponseStatus.foreach { case (topicPartition, status) =>
         if (status.error != Errors.NONE) {
           errorInResponse = true
