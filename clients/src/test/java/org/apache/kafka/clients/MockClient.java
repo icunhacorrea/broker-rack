@@ -186,6 +186,11 @@ public class MockClient implements KafkaClient {
     }
 
     @Override
+    public void send(ClientRequest request, long now, int ack) {
+        send(request, now);
+    }
+
+    @Override
     public void send(ClientRequest request, long now) {
         if (!connectionState(request.destination()).isReady(now))
             throw new IllegalStateException("Cannot send " + request + " since the destination is not ready");

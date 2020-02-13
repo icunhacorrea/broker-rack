@@ -32,14 +32,7 @@ import org.apache.kafka.common.protocol.ApiKeys;
 import org.apache.kafka.common.protocol.Errors;
 import org.apache.kafka.common.protocol.CommonFields;
 import org.apache.kafka.common.protocol.types.Struct;
-import org.apache.kafka.common.requests.AbstractRequest;
-import org.apache.kafka.common.requests.AbstractResponse;
-import org.apache.kafka.common.requests.ApiVersionsRequest;
-import org.apache.kafka.common.requests.ApiVersionsResponse;
-import org.apache.kafka.common.requests.MetadataRequest;
-import org.apache.kafka.common.requests.MetadataResponse;
-import org.apache.kafka.common.requests.RequestHeader;
-import org.apache.kafka.common.requests.ResponseHeader;
+import org.apache.kafka.common.requests.*;
 import org.apache.kafka.common.utils.LogContext;
 import org.apache.kafka.common.utils.Time;
 import org.apache.kafka.common.utils.Utils;
@@ -420,6 +413,12 @@ public class NetworkClient implements KafkaClient {
      * @param now the current timestamp
      */
     private boolean canSendRequest(String node, long now) {
+        System.out.println("**** Métodos que definem se é possível mandar um request ****");
+        System.out.println(connectionStates.isReady(node, now));
+        System.out.println(selector.isChannelReady(node));
+        System.out.println(inFlightRequests.canSendMore(node));
+
+
         return connectionStates.isReady(node, now) && selector.isChannelReady(node) &&
             inFlightRequests.canSendMore(node);
     }
@@ -434,15 +433,50 @@ public class NetworkClient implements KafkaClient {
         doSend(request, false, now);
     }
 
+    @Override
+    public void send(ClientRequest request, long now, int ack) {
+        sendNackRequestIfNecessary(request.destination(), request.requestTimeoutMs());
+        doSend(request, false, now);
+    }
+
     // package-private for testing
     void sendInternalMetadataRequest(MetadataRequest.Builder builder, String nodeConnectionId, long now) {
         ClientRequest clientRequest = newClientRequest(nodeConnectionId, builder, now, true);
         doSend(clientRequest, true, now);
     }
 
+    void handleNackProduceResponse(ClientResponse response) {
+        log.info("EAE CARAIO IAIHRAIHRAIHIRAIRA");
+        RequestHeader requestHeader = response.requestHeader();
+        if(response.hasResponse()) {
+            log.info("Existe uma resposta a ser trabalhada.");
+        }
+    }
+
+    void sendNackRequestIfNecessary(String nodeId, int timeout) {
+        System.out.println("Enviando um nack request.");
+        System.out.println("Entrou aqui oloco.");
+        NackProduceRequest.Builder requestBuilder = new NackProduceRequest.Builder((short) 0,(short) -2, timeout, Integer.parseInt(nodeId),null);
+
+        RequestCompletionHandler callback = new RequestCompletionHandler() {
+            @Override
+            public void onComplete(ClientResponse response) {
+                handleNackProduceResponse(response);
+            }
+        };
+        long now = time.milliseconds();
+        System.out.println("NodeId: " + nodeId);
+        System.out.println("Id Transação: " + "transactionalId");
+        ClientRequest clientRequest = newClientRequest(nodeId,requestBuilder, now, true,
+                timeout, callback);
+        doSend(clientRequest, true, now);
+
+    }
+
     private void doSend(ClientRequest clientRequest, boolean isInternalRequest, long now) {
         ensureActive();
         String nodeId = clientRequest.destination();
+
         if (!isInternalRequest) {
             // If this request came from outside the NetworkClient, validate
             // that we can send data.  If the request is internal, we trust

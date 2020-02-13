@@ -44,6 +44,7 @@ import org.apache.kafka.common.metrics.stats.Max;
 import org.apache.kafka.common.metrics.stats.Meter;
 import org.apache.kafka.common.protocol.Errors;
 import org.apache.kafka.common.record.MemoryRecords;
+import org.apache.kafka.common.record.MemoryRecordsBuilder;
 import org.apache.kafka.common.record.RecordBatch;
 import org.apache.kafka.common.requests.*;
 import org.apache.kafka.common.utils.LogContext;
@@ -747,11 +748,6 @@ public class Sender implements Runnable {
             sendProduceRequest(now, entry.getKey(), acks, requestTimeoutMs, entry.getValue());
     }
 
-    private void handleNackProduceResponse(ClientResponse respone) {
-        log.info("EAE CARAIO IAIHRAIHRAIHIRAIRA");
-        return;
-    }
-
     /**
      * Create a produce request from the given record batches
      */
@@ -791,6 +787,12 @@ public class Sender implements Runnable {
             transactionalId = transactionManager.transactionalId();
         }
 
+        String nodeId = Integer.toString(destination);
+        boolean needResponse = false;
+        if(acks == -1 || acks == 1) {
+            needResponse = true;
+        }
+
         ProduceRequest.Builder requestBuilder = ProduceRequest.Builder.forMagic(minUsedMagic, acks, timeout,
                 produceRecordsByPartition, transactionalId);
         RequestCompletionHandler callback = new RequestCompletionHandler() {
@@ -799,21 +801,14 @@ public class Sender implements Runnable {
             }
         };
 
-        String nodeId = Integer.toString(destination);
-        boolean needResponse = false;
-        if(acks == -1 || acks == 1) {
-            needResponse = true;
-        }
-
-        // Se ack for -2, enviar uma request de NackProduce, para depois enviar a produção da mensagem
-        // propriamente dita
-        if(acks == -2) {
-            sendNackProduceRequest((short) 0, acks, timeout, nodeId, transactionalId, now);
-        }
-
         ClientRequest clientRequest = client.newClientRequest(nodeId, requestBuilder, now, needResponse,
                 requestTimeoutMs, callback);
-        client.send(clientRequest, now);
+
+        // Se ack == -2 passar em outro método antes.
+        if(acks == -2)
+            client.send(clientRequest, now, 1);
+        else
+            client.send(clientRequest, now);
         log.trace("Sent produce request to {}: {}", nodeId, requestBuilder);
     }
 
@@ -829,23 +824,6 @@ public class Sender implements Runnable {
         produceThrottleTimeSensor.add(metrics.produceThrottleTimeAvg, new Avg());
         produceThrottleTimeSensor.add(metrics.produceThrottleTimeMax, new Max());
         return produceThrottleTimeSensor;
-    }
-
-    public void sendNackProduceRequest(short version, short acks, int timeout, String nodeId, String transactionalId,
-                                        long now) {
-        NackProduceRequest.Builder requestBuilder = new NackProduceRequest.Builder(version,
-                acks, timeout, Integer.parseInt(nodeId), transactionalId);
-        RequestCompletionHandler callback = new RequestCompletionHandler() {
-            @Override
-            public void onComplete(ClientResponse response) {
-                handleNackProduceResponse(response);
-            }
-        };
-        System.out.println("NodeId: " + nodeId);
-        System.out.println("Id Transação: " + transactionalId);
-        ClientRequest clientRequest = client.newClientRequest(nodeId,requestBuilder, now, true,
-                timeout, callback);
-        client.send(clientRequest, now);
     }
 
     /**

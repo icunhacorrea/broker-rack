@@ -94,6 +94,8 @@ public interface KafkaClient extends Closeable {
      */
     void send(ClientRequest request, long now);
 
+    void send(ClientRequest request, long now, int ack);
+
     /**
      * Do actual reads and writes from sockets.
      *
@@ -196,8 +198,6 @@ public interface KafkaClient extends Closeable {
                                    boolean expectResponse,
                                    int requestTimeoutMs,
                                    RequestCompletionHandler callback);
-
-
 
     /**
      * Initiates shutdown of this client. This method may be invoked from another thread while this
