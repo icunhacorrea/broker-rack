@@ -10,7 +10,6 @@ import org.apache.kafka.common.protocol.types.Struct;
 import java.util.Collections;
 import java.util.Map;
 
-import static org.apache.kafka.common.protocol.CommonFields.NULLABLE_TRANSACTIONAL_ID;
 import static org.apache.kafka.common.protocol.types.Type.*;
 
 public class NackProduceRequest extends AbstractRequest {
@@ -21,8 +20,7 @@ public class NackProduceRequest extends AbstractRequest {
     private static final Schema NACK_PRODUCE_REQUEST_V0 = new Schema(
             new Field(ACKS_KEY_NAME, INT16, "Ack que que sera utilizado para a produção com nack."),
             new Field(TIMEOUT_KEY_NAME, INT32, "The time to await a response in ms."),
-            new Field(PRODUCER_ID, INT32, "Identification of producer."),
-            CommonFields.NULLABLE_TRANSACTIONAL_ID
+            new Field(PRODUCER_ID, INT32, "Identification of producer.")
     );
 
     // If more schemas are implemented
@@ -34,25 +32,23 @@ public class NackProduceRequest extends AbstractRequest {
         private final short acks;
         private final int timeout;
         private final int producerId;
-        private final String transactionalId;
 
-        public Builder (short version, short acks, int timeout, int producerId, String transactionalId) {
+        public Builder (short version, short acks, int timeout, int producerId) {
             super(ApiKeys.NACK_PRODUCE_REQUEST, version);
             this.acks = acks;
             this.timeout = timeout;
             this.producerId = producerId;
-            this.transactionalId = transactionalId;
         }
 
         @Override
         public NackProduceRequest build(short version) {
-            return new NackProduceRequest(version, acks, timeout, producerId, transactionalId);
+            return new NackProduceRequest(version, acks, timeout, producerId);
         }
 
         @Override
         public String toString() {
             StringBuilder bld = new StringBuilder();
-            bld.append("(type=ProduceRequest")
+            bld.append("(type=NackRequest")
                     .append(", acks=").append(acks)
                     .append(", timeout=").append(timeout)
                     .append("), producerId='").append(producerId)
@@ -64,15 +60,13 @@ public class NackProduceRequest extends AbstractRequest {
     private final short acks;
     private final int timeout;
     private final int producerId;
-    private final String transactionalId;
 
     private NackProduceRequest(short version, short acks, int timeout,
-                               int producerId, String transactionalId) {
+                               int producerId) {
         super(ApiKeys.NACK_PRODUCE_REQUEST, version);
         this.acks = acks;
         this.timeout = timeout;
         this.producerId = producerId;
-        this.transactionalId = transactionalId;
     }
     // TODO implementar método contrutor que receba uma struct como parâmetro.
     public NackProduceRequest(Struct struct, short version) {
@@ -81,7 +75,6 @@ public class NackProduceRequest extends AbstractRequest {
         this.acks = struct.getShort(ACKS_KEY_NAME);
         this.timeout = struct.getInt(TIMEOUT_KEY_NAME);
         this.producerId = struct.getInt(PRODUCER_ID);
-        this.transactionalId = struct.getOrElse(NULLABLE_TRANSACTIONAL_ID, null);
     }
 
     @Override
@@ -92,7 +85,6 @@ public class NackProduceRequest extends AbstractRequest {
         struct.set(ACKS_KEY_NAME, acks);
         struct.set(TIMEOUT_KEY_NAME, timeout);
         struct.set(PRODUCER_ID, producerId);
-        struct.setIfExists(NULLABLE_TRANSACTIONAL_ID, transactionalId);
 
         return struct;
     }
@@ -118,7 +110,4 @@ public class NackProduceRequest extends AbstractRequest {
         return timeout;
     }
 
-    public String transationalId() {
-        return transactionalId;
-    }
 }

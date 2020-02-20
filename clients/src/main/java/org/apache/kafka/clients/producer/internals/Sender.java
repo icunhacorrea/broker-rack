@@ -118,6 +118,10 @@ public class Sender implements Runnable {
     // A per-partition queue of batches ordered by creation time for tracking the in-flight batches
     private final Map<TopicPartition, List<ProducerBatch>> inFlightBatches;
 
+    // Geral pollTimeout * In cases of acks = -2
+
+    long genPollTimeout = 0;
+
     public Sender(LogContext logContext,
                   KafkaClient client,
                   ProducerMetadata metadata,
@@ -327,6 +331,7 @@ public class Sender implements Runnable {
 
         long currentTimeMs = time.milliseconds();
         long pollTimeout = sendProducerData(currentTimeMs);
+        genPollTimeout = pollTimeout;
         client.poll(pollTimeout, currentTimeMs);
     }
 
@@ -748,6 +753,36 @@ public class Sender implements Runnable {
             sendProduceRequest(now, entry.getKey(), acks, requestTimeoutMs, entry.getValue());
     }
 
+
+    // Teoricamente em casos onde uma mensagem foi entregue, este método nem deverá ser chamado.
+    // Quando for chamado, ele deverá reenviar uma mensagem pois a mensagem não foi entregue de fato.
+    void handleNackProduceResponse(ClientResponse response, long now) {
+        RequestHeader requestHeader = response.requestHeader();
+        if(response.hasResponse()) {
+            System.out.println("Existe uma resposta a ser trabalhada.");
+        }
+    }
+
+    // Envio de uma nackRequest ao servidor
+    void sendNackRequest(String nodeId, long now) {
+        System.out.println("Enviando um nack request.");
+        NackProduceRequest.Builder requestBuilder = new NackProduceRequest.Builder((short) 0,(short) -2, 
+            requestTimeoutMs, Integer.parseInt(nodeId));
+
+        RequestCompletionHandler callback = new RequestCompletionHandler() {
+            @Override
+            public void onComplete(ClientResponse response) {
+                handleNackProduceResponse(response, now);
+            }
+        };
+
+        // 1⁰ Tentativa com timeout de 30 segundos.
+
+        ClientRequest clientRequest = client.newClientRequest(nodeId,requestBuilder, now, true,
+                30, callback);
+        client.send(clientRequest, now, true);
+    }
+
     /**
      * Create a produce request from the given record batches
      */
@@ -789,6 +824,14 @@ public class Sender implements Runnable {
 
         String nodeId = Integer.toString(destination);
         boolean needResponse = false;
+
+        List<ClientResponse> response = new ArrayList<>();
+        long nackNow = time.milliseconds();
+        if(acks == -2) {
+            sendNackRequest(nodeId, nackNow);
+            //client.poll(genPollTimeout, time.milliseconds());
+        }
+
         if(acks == -1 || acks == 1) {
             needResponse = true;
         }
@@ -797,18 +840,15 @@ public class Sender implements Runnable {
                 produceRecordsByPartition, transactionalId);
         RequestCompletionHandler callback = new RequestCompletionHandler() {
             public void onComplete(ClientResponse response) {
-                handleProduceResponse(response, recordsByPartition, time.milliseconds());
+                handleProduceResponse(response, recordsByPartition, now);
             }
         };
 
-        ClientRequest clientRequest = client.newClientRequest(nodeId, requestBuilder, now, needResponse,
-                requestTimeoutMs, callback);
-
-        // Se ack == -2 passar em outro método antes.
-        if(acks == -2)
-            client.send(clientRequest, now, 1);
-        else
-            client.send(clientRequest, now);
+        int defineTimeout = (acks == -2) ? 30 : requestTimeoutMs;
+        System.out.println("O NOVO TIMEOUT: " + defineTimeout);
+        ClientRequest clientRequest = client.newClientRequest(nodeId, requestBuilder, now, acks != 0,
+                defineTimeout, callback);
+        client.send(clientRequest, now);
         log.trace("Sent produce request to {}: {}", nodeId, requestBuilder);
     }
 

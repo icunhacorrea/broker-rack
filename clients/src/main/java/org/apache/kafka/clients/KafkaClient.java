@@ -94,7 +94,7 @@ public interface KafkaClient extends Closeable {
      */
     void send(ClientRequest request, long now);
 
-    void send(ClientRequest request, long now, int ack);
+    void send(ClientRequest request, long now, boolean nack);
 
     /**
      * Do actual reads and writes from sockets.

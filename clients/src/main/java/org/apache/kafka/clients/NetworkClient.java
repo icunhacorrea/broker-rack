@@ -434,9 +434,15 @@ public class NetworkClient implements KafkaClient {
     }
 
     @Override
-    public void send(ClientRequest request, long now, int ack) {
-        sendNackRequestIfNecessary(request.destination(), request.requestTimeoutMs());
-        doSend(request, false, now);
+    public void send(ClientRequest request, long now, boolean nack) {
+        doSend(request, nack, now);
+        List<ClientResponse> responses = poll(20000, now);
+        int i = 0;
+        for (ClientResponse response : responses) {
+            System.out.println("Response + " + i + ": ");
+            response.toString();
+            i++;
+        }
     }
 
     // package-private for testing
@@ -445,37 +451,12 @@ public class NetworkClient implements KafkaClient {
         doSend(clientRequest, true, now);
     }
 
-    void handleNackProduceResponse(ClientResponse response) {
-        log.info("EAE CARAIO IAIHRAIHRAIHIRAIRA");
-        RequestHeader requestHeader = response.requestHeader();
-        if(response.hasResponse()) {
-            log.info("Existe uma resposta a ser trabalhada.");
-        }
-    }
-
-    void sendNackRequestIfNecessary(String nodeId, int timeout) {
-        System.out.println("Enviando um nack request.");
-        System.out.println("Entrou aqui oloco.");
-        NackProduceRequest.Builder requestBuilder = new NackProduceRequest.Builder((short) 0,(short) -2, timeout, Integer.parseInt(nodeId),null);
-
-        RequestCompletionHandler callback = new RequestCompletionHandler() {
-            @Override
-            public void onComplete(ClientResponse response) {
-                handleNackProduceResponse(response);
-            }
-        };
-        long now = time.milliseconds();
-        System.out.println("NodeId: " + nodeId);
-        System.out.println("Id Transação: " + "transactionalId");
-        ClientRequest clientRequest = newClientRequest(nodeId,requestBuilder, now, true,
-                timeout, callback);
-        doSend(clientRequest, true, now);
-
-    }
-
     private void doSend(ClientRequest clientRequest, boolean isInternalRequest, long now) {
         ensureActive();
         String nodeId = clientRequest.destination();
+
+        System.out.println("ClientRequest toString: " + clientRequest.toString());
+        System.out.println("Quantidade de inFlightRequests: " + this.inFlightRequests.count());
 
         if (!isInternalRequest) {
             // If this request came from outside the NetworkClient, validate
