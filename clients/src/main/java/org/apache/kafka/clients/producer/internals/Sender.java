@@ -777,9 +777,10 @@ public class Sender implements Runnable {
         };
 
         // 1⁰ Tentativa com timeout de 30 segundos.
+        // 2⁰ Tentativas de utilizar requestTimeoutMs
 
         ClientRequest clientRequest = client.newClientRequest(nodeId,requestBuilder, now, true,
-                30, callback);
+                requestTimeoutMs, callback);
         client.send(clientRequest, now, true);
     }
 
@@ -844,10 +845,8 @@ public class Sender implements Runnable {
             }
         };
 
-        int defineTimeout = (acks == -2) ? 30 : requestTimeoutMs;
-        System.out.println("O NOVO TIMEOUT: " + defineTimeout);
         ClientRequest clientRequest = client.newClientRequest(nodeId, requestBuilder, now, acks != 0,
-                defineTimeout, callback);
+                requestTimeoutMs, callback);
         client.send(clientRequest, now);
         log.trace("Sent produce request to {}: {}", nodeId, requestBuilder);
     }

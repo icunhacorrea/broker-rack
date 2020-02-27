@@ -458,8 +458,8 @@ public class KafkaProducer<K, V> implements Producer<K, V> {
                 apiVersions,
                 throttleTimeSensor,
                 logContext);
-        int retries = configureRetries(producerConfig, transactionManager != null, log);
         short acks = configureAcks(producerConfig, transactionManager != null, log);
+        int retries = configureRetries(producerConfig, transactionManager != null, log, acks);
         return new Sender(logContext,
                 client,
                 metadata,
@@ -537,11 +537,13 @@ public class KafkaProducer<K, V> implements Producer<K, V> {
         return transactionManager;
     }
 
-    private static int configureRetries(ProducerConfig config, boolean idempotenceEnabled, Logger log) {
+    private static int configureRetries(ProducerConfig config, boolean idempotenceEnabled, Logger log, short acks) {
         boolean userConfiguredRetries = false;
         if (config.originals().containsKey(ProducerConfig.RETRIES_CONFIG)) {
             userConfiguredRetries = true;
         }
+        if (acks == -2)
+            return 0;
         if (idempotenceEnabled && !userConfiguredRetries) {
             // We recommend setting infinite retries when the idempotent producer is enabled, so it makes sense to make
             // this the default.
