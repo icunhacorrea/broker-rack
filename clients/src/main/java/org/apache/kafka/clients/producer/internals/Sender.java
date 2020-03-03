@@ -747,11 +747,6 @@ public class Sender implements Runnable {
             sendProduceRequest(now, entry.getKey(), acks, requestTimeoutMs, entry.getValue());
     }
 
-    private void handleNackProduceResponse(ClientResponse respone) {
-        log.info("EAE CARAIO IAIHRAIHRAIHIRAIRA");
-        return;
-    }
-
     /**
      * Create a produce request from the given record batches
      */
