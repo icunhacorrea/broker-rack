@@ -428,19 +428,27 @@ class KafkaApis(val requestChannel: RequestChannel,
    * Handle NackProduce Request
    */
 
+  val nackCounter = new AtomicInteger(0);
+  
   def handleNackProduceRequest(request: RequestChannel.Request) {
-    info("Caraio")
     val nackRequest = request.body[NackProduceRequest]
     info(nackRequest.toString())
-    // 1⁰ Tentativa de reenviar uma resposta pro client
-
-
     /** 
-    * 1⁰  Enviar respostas de que servidor entendeu. (  )
+    * 1⁰  Enviar respostas de que servidor entendeu. ( OK )
     * 2⁰  Start um relógio pra esperar uma mensagem. (  )
     */
-    //sendResponse(request, None, None)
-    sendResponse(request, Some(new NackProduceResponse(Errors.NONE, nackRequest.timeout, nackRequest.transationalId)), None)
+    var now = System.currentTimeMillis()
+    while((System.currentTimeMillis() - now) < nackRequest.timeout()) {
+      info("System.nanoTime() - now: " + (System.currentTimeMillis() - now))
+      if (nackCounter.get() == 1) {
+        info("Uma requisição chegou em handleProduceRequest.")
+        return
+      }
+    }
+    // TODO caso não chegue uma Produce Request, enviar um Nack
+    nackCounter.decrementAndGet()
+    info("saiste do loop")
+    sendResponse(request, Some(new NackProduceResponse(Errors.NONE, nackRequest.timeout)), None)
   }
   /**
    * Handle a produce request
@@ -488,7 +496,6 @@ class KafkaApis(val requestChannel: RequestChannel,
       val mergedResponseStatus = responseStatus ++ unauthorizedTopicResponses ++ nonExistingTopicResponses ++ invalidRequestResponses
       var errorInResponse = false
 
-      // Alterou isso aqui para info.
       mergedResponseStatus.foreach { case (topicPartition, status) =>
         if (status.error != Errors.NONE) {
           errorInResponse = true
@@ -506,7 +513,6 @@ class KafkaApis(val requestChannel: RequestChannel,
       // Record both bandwidth and request quota-specific values and throttle by muting the channel if any of the quotas
       // have been violated. If both quotas have been violated, use the max throttle time between the two quotas. Note
       // that the request quota is not enforced if acks == 0.
-      // Adição ao if com ack == -2
       val bandwidthThrottleTimeMs = quotas.produce.maybeRecordAndGetThrottleTimeMs(request, numBytesAppended, time.milliseconds())
       val requestThrottleTimeMs = if (produceRequest.acks == 0 || produceRequest.acks == -2) 0 else quotas.request.maybeRecordAndGetThrottleTimeMs(request)
       val maxThrottleTimeMs = Math.max(bandwidthThrottleTimeMs, requestThrottleTimeMs)
@@ -517,7 +523,6 @@ class KafkaApis(val requestChannel: RequestChannel,
           quotas.request.throttle(request, requestThrottleTimeMs, sendResponse)
         }
       }
-      
 
       // Adição da mesma opção para produceRequest.acks == -2 (nack)
       // Send the response immediately. In case of throttling, the channel has already been muted.
@@ -538,6 +543,8 @@ class KafkaApis(val requestChannel: RequestChannel,
         } else {
           // Note that although request throttling is exempt for acks == 0, the channel may be throttled due to
           // bandwidth quota violation.
+          // TODO Adição do increment na tupla
+          info("Messagem (" + produceRequest.getMessage() + "/" + produceRequest.getTotal() + ")")
           sendNoOpResponseExemptThrottle(request)
         }
       } else {

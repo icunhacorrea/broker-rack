@@ -44,6 +44,7 @@ import org.apache.kafka.common.metrics.stats.Max;
 import org.apache.kafka.common.metrics.stats.Meter;
 import org.apache.kafka.common.protocol.Errors;
 import org.apache.kafka.common.record.MemoryRecords;
+import org.apache.kafka.common.record.MemoryRecordsBuilder;
 import org.apache.kafka.common.record.RecordBatch;
 import org.apache.kafka.common.requests.*;
 import org.apache.kafka.common.utils.LogContext;
@@ -52,12 +53,7 @@ import org.apache.kafka.common.utils.Utils;
 import org.slf4j.Logger;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static org.apache.kafka.common.record.RecordBatch.NO_TIMESTAMP;
 
@@ -117,6 +113,8 @@ public class Sender implements Runnable {
     // A per-partition queue of batches ordered by creation time for tracking the in-flight batches
     private final Map<TopicPartition, List<ProducerBatch>> inFlightBatches;
 
+    private final int qntRecords;
+
     public Sender(LogContext logContext,
                   KafkaClient client,
                   ProducerMetadata metadata,
@@ -147,6 +145,41 @@ public class Sender implements Runnable {
         this.apiVersions = apiVersions;
         this.transactionManager = transactionManager;
         this.inFlightBatches = new HashMap<>();
+        this.qntRecords = 0;
+    }
+
+    public Sender(LogContext logContext,
+                  KafkaClient client,
+                  ProducerMetadata metadata,
+                  RecordAccumulator accumulator,
+                  boolean guaranteeMessageOrder,
+                  int maxRequestSize,
+                  short acks,
+                  int retries,
+                  SenderMetricsRegistry metricsRegistry,
+                  Time time,
+                  int requestTimeoutMs,
+                  long retryBackoffMs,
+                  TransactionManager transactionManager,
+                  ApiVersions apiVersions,
+                  int qntRecords) {
+        this.log = logContext.logger(Sender.class);
+        this.client = client;
+        this.accumulator = accumulator;
+        this.metadata = metadata;
+        this.guaranteeMessageOrder = guaranteeMessageOrder;
+        this.maxRequestSize = maxRequestSize;
+        this.running = true;
+        this.acks = acks;
+        this.retries = retries;
+        this.time = time;
+        this.sensors = new SenderMetrics(metricsRegistry, metadata, client, time);
+        this.requestTimeoutMs = requestTimeoutMs;
+        this.retryBackoffMs = retryBackoffMs;
+        this.apiVersions = apiVersions;
+        this.transactionManager = transactionManager;
+        this.inFlightBatches = new HashMap<>();
+        this.qntRecords = qntRecords;
     }
 
     public List<ProducerBatch> inFlightBatches(TopicPartition tp) {
@@ -329,6 +362,8 @@ public class Sender implements Runnable {
         client.poll(pollTimeout, currentTimeMs);
     }
 
+
+    int countRequests = 0;
     private long sendProducerData(long now) {
         Cluster cluster = metadata.fetch();
         // get the list of partitions with data ready to send
@@ -754,6 +789,10 @@ public class Sender implements Runnable {
         if (batches.isEmpty())
             return;
 
+        // Contador de ProducesRequests.
+        countRequests++;
+        System.out.println("CountRequests: " + countRequests);
+
         Map<TopicPartition, MemoryRecords> produceRecordsByPartition = new HashMap<>(batches.size());
         final Map<TopicPartition, ProducerBatch> recordsByPartition = new HashMap<>(batches.size());
 
@@ -786,25 +825,24 @@ public class Sender implements Runnable {
             transactionalId = transactionManager.transactionalId();
         }
 
-        ProduceRequest.Builder requestBuilder = ProduceRequest.Builder.forMagic(minUsedMagic, acks, timeout,
-                produceRecordsByPartition, transactionalId);
-        RequestCompletionHandler callback = new RequestCompletionHandler() {
-            public void onComplete(ClientResponse response) {
-                handleProduceResponse(response, recordsByPartition, time.milliseconds());
-            }
-        };
-
         String nodeId = Integer.toString(destination);
         boolean needResponse = false;
-        if(acks == -1 || acks == 1) {
+        if(acks == 1 || acks == -1)
             needResponse = true;
-        }
 
-        // Se ack for -2, enviar uma request de NackProduce, para depois enviar a produção da mensagem
-        // propriamente dita
-        if(acks == -2) {
-            sendNackProduceRequest((short) 0, acks, timeout, nodeId, transactionalId, now);
+        ProduceRequest.Builder requestBuilder = null;
+        if (acks == -2) {
+            requestBuilder = ProduceRequest.Builder.forMagic(minUsedMagic, acks, timeout,
+                    produceRecordsByPartition, transactionalId, countRequests, qntRecords);
+        } else {
+            requestBuilder = ProduceRequest.Builder.forMagic(minUsedMagic, acks, timeout,
+                    produceRecordsByPartition, transactionalId);
         }
+        RequestCompletionHandler callback = new RequestCompletionHandler() {
+            public void onComplete(ClientResponse response) {
+                handleProduceResponse(response, recordsByPartition, now);
+            }
+        };
 
         ClientRequest clientRequest = client.newClientRequest(nodeId, requestBuilder, now, needResponse,
                 requestTimeoutMs, callback);
@@ -824,23 +862,6 @@ public class Sender implements Runnable {
         produceThrottleTimeSensor.add(metrics.produceThrottleTimeAvg, new Avg());
         produceThrottleTimeSensor.add(metrics.produceThrottleTimeMax, new Max());
         return produceThrottleTimeSensor;
-    }
-
-    public void sendNackProduceRequest(short version, short acks, int timeout, String nodeId, String transactionalId,
-                                        long now) {
-        NackProduceRequest.Builder requestBuilder = new NackProduceRequest.Builder(version,
-                acks, timeout, Integer.parseInt(nodeId), transactionalId);
-        RequestCompletionHandler callback = new RequestCompletionHandler() {
-            @Override
-            public void onComplete(ClientResponse response) {
-                handleNackProduceResponse(response);
-            }
-        };
-        System.out.println("NodeId: " + nodeId);
-        System.out.println("Id Transação: " + transactionalId);
-        ClientRequest clientRequest = client.newClientRequest(nodeId,requestBuilder, now, true,
-                timeout, callback);
-        client.send(clientRequest, now);
     }
 
     /**
