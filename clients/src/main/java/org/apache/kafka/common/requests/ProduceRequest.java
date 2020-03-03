@@ -60,6 +60,8 @@ public class ProduceRequest extends AbstractRequest {
     // partition level field names
     private static final String RECORD_SET_KEY_NAME = "record_set";
 
+    private static final String MESSAGE_ID = "message_id";
+    private static final String TOTAL_MESSAGE = "count_message";
 
     private static final Schema TOPIC_PRODUCE_DATA_V0 = new Schema(
             TOPIC_NAME,
@@ -94,7 +96,9 @@ public class ProduceRequest extends AbstractRequest {
                     "received before considering a request complete. Allowed values: 0 for no acknowledgments, 1 " +
                     "for only the leader and -1 for the full ISR."),
             new Field(TIMEOUT_KEY_NAME, INT32, "The time to await a response in ms."),
-            new Field(TOPIC_DATA_KEY_NAME, new ArrayOf(TOPIC_PRODUCE_DATA_V0)));
+            new Field(TOPIC_DATA_KEY_NAME, new ArrayOf(TOPIC_PRODUCE_DATA_V0)),
+            new Field(MESSAGE_ID, INT32, "Posição da mensagem enviada do total."),
+            new Field(TOTAL_MESSAGE, INT32, "Total de mensagens a serem enviadas"));
 
     /**
      * The body of PRODUCE_REQUEST_V4 is the same as PRODUCE_REQUEST_V3.
@@ -131,10 +135,13 @@ public class ProduceRequest extends AbstractRequest {
         private final Map<TopicPartition, MemoryRecords> partitionRecords;
         private final String transactionalId;
 
+        private final int message;
+        private final int total;
+
         public static Builder forCurrentMagic(short acks,
                                               int timeout,
                                               Map<TopicPartition, MemoryRecords> partitionRecords) {
-            return forMagic(RecordBatch.CURRENT_MAGIC_VALUE, acks, timeout, partitionRecords, null);
+            return forMagic(RecordBatch.CURRENT_MAGIC_VALUE, acks, timeout, partitionRecords, null, 0 , 0);
         }
 
         public static Builder forMagic(byte magic,
@@ -158,6 +165,47 @@ public class ProduceRequest extends AbstractRequest {
             return new Builder(minVersion, maxVersion, acks, timeout, partitionRecords, transactionalId);
         }
 
+        public static Builder forMagic(byte magic,
+                                       short acks,
+                                       int timeout,
+                                       Map<TopicPartition, MemoryRecords> partitionRecords,
+                                       String transactionalId,
+                                       int message,
+                                       int total) {
+            // Message format upgrades correspond with a bump in the produce request version. Older
+            // message format versions are generally not supported by the produce request versions
+            // following the bump.
+
+            final short minVersion;
+            final short maxVersion;
+            if (magic < RecordBatch.MAGIC_VALUE_V2) {
+                minVersion = 2;
+                maxVersion = 2;
+            } else {
+                minVersion = 3;
+                maxVersion = ApiKeys.PRODUCE.latestVersion();
+            }
+            return new Builder(minVersion, maxVersion, acks, timeout, partitionRecords, transactionalId,
+                    message, total);
+        }
+
+        public Builder(short minVersion,
+                       short maxVersion,
+                       short acks,
+                       int timeout,
+                       Map<TopicPartition, MemoryRecords> partitionRecords,
+                       String transactionalId,
+                       int message,
+                       int total) {
+            super(ApiKeys.PRODUCE, minVersion, maxVersion);
+            this.acks = acks;
+            this.timeout = timeout;
+            this.partitionRecords = partitionRecords;
+            this.transactionalId = transactionalId;
+            this.message = message;
+            this.total = total;
+        }
+
         public Builder(short minVersion,
                        short maxVersion,
                        short acks,
@@ -169,6 +217,8 @@ public class ProduceRequest extends AbstractRequest {
             this.timeout = timeout;
             this.partitionRecords = partitionRecords;
             this.transactionalId = transactionalId;
+            this.message = 0;
+            this.total = 0;
         }
 
         @Override
@@ -188,7 +238,7 @@ public class ProduceRequest extends AbstractRequest {
                     ProduceRequest.validateRecords(version, records);
                 }
             }
-            return new ProduceRequest(version, acks, timeout, partitionRecords, transactionalId);
+            return new ProduceRequest(version, acks, timeout, partitionRecords, transactionalId, message, total);
         }
 
         @Override
@@ -207,8 +257,10 @@ public class ProduceRequest extends AbstractRequest {
     private final short acks;
     private final int timeout;
     private final String transactionalId;
-
     private final Map<TopicPartition, Integer> partitionSizes;
+
+    private final int message;
+    private final int total;
 
     // This is set to null by `clearPartitionRecords` to prevent unnecessary memory retention when a produce request is
     // put in the purgatory (due to client throttling, it can take a while before the response is sent).
@@ -217,7 +269,8 @@ public class ProduceRequest extends AbstractRequest {
     private boolean hasTransactionalRecords = false;
     private boolean hasIdempotentRecords = false;
 
-    private ProduceRequest(short version, short acks, int timeout, Map<TopicPartition, MemoryRecords> partitionRecords, String transactionalId) {
+    private ProduceRequest(short version, short acks, int timeout, Map<TopicPartition, MemoryRecords> partitionRecords, String transactionalId,
+                           int message, int total) {
         super(ApiKeys.PRODUCE, version);
         this.acks = acks;
         this.timeout = timeout;
@@ -225,6 +278,9 @@ public class ProduceRequest extends AbstractRequest {
         this.transactionalId = transactionalId;
         this.partitionRecords = partitionRecords;
         this.partitionSizes = createPartitionSizes(partitionRecords);
+
+        this.message = message;
+        this.total = total;
 
         for (MemoryRecords records : partitionRecords.values()) {
             setFlags(records);
@@ -256,6 +312,9 @@ public class ProduceRequest extends AbstractRequest {
         acks = struct.getShort(ACKS_KEY_NAME);
         timeout = struct.getInt(TIMEOUT_KEY_NAME);
         transactionalId = struct.getOrElse(NULLABLE_TRANSACTIONAL_ID, null);
+
+        message = struct.getInt(MESSAGE_ID);
+        total = struct.getInt(TOTAL_MESSAGE);
     }
 
     private void setFlags(MemoryRecords records) {
@@ -278,6 +337,9 @@ public class ProduceRequest extends AbstractRequest {
         struct.set(ACKS_KEY_NAME, acks);
         struct.set(TIMEOUT_KEY_NAME, timeout);
         struct.setIfExists(NULLABLE_TRANSACTIONAL_ID, transactionalId);
+
+        struct.set(MESSAGE_ID, message);
+        struct.set(TOTAL_MESSAGE, total);
 
         List<Struct> topicDatas = new ArrayList<>(recordsByTopic.size());
         for (Map.Entry<String, Map<Integer, MemoryRecords>> topicEntry : recordsByTopic.entrySet()) {
@@ -372,6 +434,14 @@ public class ProduceRequest extends AbstractRequest {
 
     public boolean hasIdempotentRecords() {
         return hasIdempotentRecords;
+    }
+
+    public int getTotal() {
+        return total;
+    }
+
+    public int getMessage() {
+        return message;
     }
 
     /**

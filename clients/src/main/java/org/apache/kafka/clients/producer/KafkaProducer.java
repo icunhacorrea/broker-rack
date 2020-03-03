@@ -458,8 +458,9 @@ public class KafkaProducer<K, V> implements Producer<K, V> {
                 apiVersions,
                 throttleTimeSensor,
                 logContext);
+        int retries = configureRetries(producerConfig, transactionManager != null, log);
         short acks = configureAcks(producerConfig, transactionManager != null, log);
-        int retries = configureRetries(producerConfig, transactionManager != null, log, acks);
+        int qntRecords  = producerConfig.getInt(ProducerConfig.QNT_REQUESTS);
         return new Sender(logContext,
                 client,
                 metadata,
@@ -473,7 +474,8 @@ public class KafkaProducer<K, V> implements Producer<K, V> {
                 requestTimeoutMs,
                 producerConfig.getLong(ProducerConfig.RETRY_BACKOFF_MS_CONFIG),
                 this.transactionManager,
-                apiVersions);
+                apiVersions,
+                qntRecords);
     }
 
     private static int lingerMs(ProducerConfig config) {
@@ -537,13 +539,11 @@ public class KafkaProducer<K, V> implements Producer<K, V> {
         return transactionManager;
     }
 
-    private static int configureRetries(ProducerConfig config, boolean idempotenceEnabled, Logger log, short acks) {
+    private static int configureRetries(ProducerConfig config, boolean idempotenceEnabled, Logger log) {
         boolean userConfiguredRetries = false;
         if (config.originals().containsKey(ProducerConfig.RETRIES_CONFIG)) {
             userConfiguredRetries = true;
         }
-        if (acks == -2)
-            return 0;
         if (idempotenceEnabled && !userConfiguredRetries) {
             // We recommend setting infinite retries when the idempotent producer is enabled, so it makes sense to make
             // this the default.

@@ -437,11 +437,7 @@ class KafkaApis(val requestChannel: RequestChannel,
     * 1⁰  Enviar respostas de que servidor entendeu. ( OK )
     * 2⁰  Start um relógio pra esperar uma mensagem. (  )
     */
-    sendResponse(request, Some(new NackProduceResponse(Errors.NONE, nackRequest.timeout)), None)
     var now = System.currentTimeMillis()
-    var timeout = nackRequest.timeout()
-    info("Valor em now: " + now)
-    info("Valor em timeout: " + timeout)
     while((System.currentTimeMillis() - now) < nackRequest.timeout()) {
       info("System.nanoTime() - now: " + (System.currentTimeMillis() - now))
       if (nackCounter.get() == 1) {
@@ -449,8 +445,10 @@ class KafkaApis(val requestChannel: RequestChannel,
         return
       }
     }
-    // Caso saia do laço sem uma resposta, enviar um produce response.
+    // TODO caso não chegue uma Produce Request, enviar um Nack
+    nackCounter.decrementAndGet()
     info("saiste do loop")
+    sendResponse(request, Some(new NackProduceResponse(Errors.NONE, nackRequest.timeout)), None)
   }
   /**
    * Handle a produce request
@@ -516,7 +514,7 @@ class KafkaApis(val requestChannel: RequestChannel,
       // have been violated. If both quotas have been violated, use the max throttle time between the two quotas. Note
       // that the request quota is not enforced if acks == 0.
       val bandwidthThrottleTimeMs = quotas.produce.maybeRecordAndGetThrottleTimeMs(request, numBytesAppended, time.milliseconds())
-      val requestThrottleTimeMs = if (produceRequest.acks == 0) 0 else quotas.request.maybeRecordAndGetThrottleTimeMs(request)
+      val requestThrottleTimeMs = if (produceRequest.acks == 0 || produceRequest.acks == -2) 0 else quotas.request.maybeRecordAndGetThrottleTimeMs(request)
       val maxThrottleTimeMs = Math.max(bandwidthThrottleTimeMs, requestThrottleTimeMs)
       if (maxThrottleTimeMs > 0) {
         if (bandwidthThrottleTimeMs > requestThrottleTimeMs) {
@@ -528,7 +526,7 @@ class KafkaApis(val requestChannel: RequestChannel,
 
       // Adição da mesma opção para produceRequest.acks == -2 (nack)
       // Send the response immediately. In case of throttling, the channel has already been muted.
-      if (produceRequest.acks == 0) {
+      if (produceRequest.acks == 0 || produceRequest.acks == -2) {
         // no operation needed if producer request.required.acks = 0; however, if there is any error in handling
         // the request, since no response is expected by the producer, the server will close socket server so that
         // the producer client will know that some error has happened and will refresh its metadata
@@ -545,11 +543,10 @@ class KafkaApis(val requestChannel: RequestChannel,
         } else {
           // Note that although request throttling is exempt for acks == 0, the channel may be throttled due to
           // bandwidth quota violation.
+          // TODO Adição do increment na tupla
+          info("Messagem (" + produceRequest.getMessage() + "/" + produceRequest.getTotal() + ")")
           sendNoOpResponseExemptThrottle(request)
         }
-      } else if (produceRequest.acks == -2) {
-        info("Entrou aqui papai.")
-        nackCounter.incrementAndGet()
       } else {
         sendResponse(request, Some(new ProduceResponse(mergedResponseStatus.asJava, maxThrottleTimeMs)), None)
       }

@@ -242,6 +242,9 @@ public class ProducerConfig extends AbstractConfig {
 	
 	public static final String TOPIC_TO_SEND = "topic.to.send";
 	public static final String TOPIC_TO_SEND_DOC = "Topic to send data";
+
+	public static final String QNT_REQUESTS = "quantidade.requests";
+    public static final String QNT_REQUESTS_DOC = "Quantidade de requests que serão efetuadas pelo produtoor.";
 	
     static {
         CONFIG = new ConfigDef().define(BOOTSTRAP_SERVERS_CONFIG, Type.LIST, Collections.emptyList(), new ConfigDef.NonNullValidator(), Importance.HIGH, CommonClientConfigs.BOOTSTRAP_SERVERS_DOC)
@@ -366,7 +369,12 @@ public class ProducerConfig extends AbstractConfig {
                                 		Type.STRING,
                                 		"",
                                 		Importance.LOW,
-                                		TOPIC_TO_SEND_DOC);
+                                		TOPIC_TO_SEND_DOC)
+                                .define(QNT_REQUESTS,
+                                        Type.INT,
+                                        0,
+                                        Importance.LOW,
+                                        QNT_REQUESTS_DOC);
     }
 
     @Override

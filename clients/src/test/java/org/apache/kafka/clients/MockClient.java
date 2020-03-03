@@ -240,11 +240,6 @@ public class MockClient implements KafkaClient {
         this.requests.add(request);
     }
 
-    @Override
-    public void send(ClientRequest request, long now, boolean nack) {
-        send(request, now);
-    }
-
     /**
      * Simulate a blocking poll in order to test wakeup behavior.
      *

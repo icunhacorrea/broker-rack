@@ -433,18 +433,6 @@ public class NetworkClient implements KafkaClient {
         doSend(request, false, now);
     }
 
-    @Override
-    public void send(ClientRequest request, long now, boolean nack) {
-        doSend(request, nack, now);
-        List<ClientResponse> responses = poll(20000, now);
-        int i = 0;
-        for (ClientResponse response : responses) {
-            System.out.println("Response + " + i + ": ");
-            response.toString();
-            i++;
-        }
-    }
-
     // package-private for testing
     void sendInternalMetadataRequest(MetadataRequest.Builder builder, String nodeConnectionId, long now) {
         ClientRequest clientRequest = newClientRequest(nodeConnectionId, builder, now, true);
