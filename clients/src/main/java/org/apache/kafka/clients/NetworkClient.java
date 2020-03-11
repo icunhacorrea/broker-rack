@@ -413,12 +413,6 @@ public class NetworkClient implements KafkaClient {
      * @param now the current timestamp
      */
     private boolean canSendRequest(String node, long now) {
-        System.out.println("**** Métodos que definem se é possível mandar um request ****");
-        System.out.println(connectionStates.isReady(node, now));
-        System.out.println(selector.isChannelReady(node));
-        System.out.println(inFlightRequests.canSendMore(node));
-
-
         return connectionStates.isReady(node, now) && selector.isChannelReady(node) &&
             inFlightRequests.canSendMore(node);
     }
@@ -443,8 +437,7 @@ public class NetworkClient implements KafkaClient {
         ensureActive();
         String nodeId = clientRequest.destination();
 
-        System.out.println("ClientRequest toString: " + clientRequest.toString());
-        System.out.println("Quantidade de inFlightRequests: " + this.inFlightRequests.count());
+        //System.out.println("ClientRequest toString: " + clientRequest.toString());
 
         if (!isInternalRequest) {
             // If this request came from outside the NetworkClient, validate

@@ -115,6 +115,8 @@ public class Sender implements Runnable {
 
     private final int qntRecords;
 
+    int countRequests = 0;
+
     public Sender(LogContext logContext,
                   KafkaClient client,
                   ProducerMetadata metadata,
@@ -362,8 +364,6 @@ public class Sender implements Runnable {
         client.poll(pollTimeout, currentTimeMs);
     }
 
-
-    int countRequests = 0;
     private long sendProducerData(long now) {
         Cluster cluster = metadata.fetch();
         // get the list of partitions with data ready to send
@@ -791,7 +791,6 @@ public class Sender implements Runnable {
 
         // Contador de ProducesRequests.
         countRequests++;
-        System.out.println("CountRequests: " + countRequests);
 
         Map<TopicPartition, MemoryRecords> produceRecordsByPartition = new HashMap<>(batches.size());
         final Map<TopicPartition, ProducerBatch> recordsByPartition = new HashMap<>(batches.size());
@@ -803,7 +802,10 @@ public class Sender implements Runnable {
                 minUsedMagic = batch.magic();
         }
 
+        String topicName = null;
         for (ProducerBatch batch : batches) {
+            if (topicName == null)
+                topicName = batch.topicPartition.topic();
             TopicPartition tp = batch.topicPartition;
             MemoryRecords records = batch.records();
 
@@ -833,7 +835,7 @@ public class Sender implements Runnable {
         ProduceRequest.Builder requestBuilder = null;
         if (acks == -2) {
             requestBuilder = ProduceRequest.Builder.forMagic(minUsedMagic, acks, timeout,
-                    produceRecordsByPartition, transactionalId, countRequests, qntRecords);
+                    produceRecordsByPartition, transactionalId, countRequests, qntRecords, topicName);
         } else {
             requestBuilder = ProduceRequest.Builder.forMagic(minUsedMagic, acks, timeout,
                     produceRecordsByPartition, transactionalId);

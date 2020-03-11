@@ -543,8 +543,13 @@ class KafkaApis(val requestChannel: RequestChannel,
         } else {
           // Note that although request throttling is exempt for acks == 0, the channel may be throttled due to
           // bandwidth quota violation.
-          // TODO Adição do increment na tupla
-          info("Messagem (" + produceRequest.getMessage() + "/" + produceRequest.getTotal() + ")")
+          // TODO Adição do increment na tupla (OK)
+          // TODO Escrever método que escreve no znode do topico origem, destino e timestamp.
+          if (produceRequest.acks() == -2) {
+            info("Messagem (" + produceRequest.getMessage() + "/" + produceRequest.getTotal() + ")")
+            adminZkClient.createProduceZnode(produceRequest.getDestiny() ,request.header.clientId(),
+              produceRequest.getMessage(), produceRequest.getTotal());
+          }
           sendNoOpResponseExemptThrottle(request)
         }
       } else {

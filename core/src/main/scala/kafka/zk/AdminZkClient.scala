@@ -430,5 +430,9 @@ class AdminZkClient(zkClient: KafkaZkClient) extends Logging {
       .map(entityPath => (entityPath, fetchEntityConfig(rootEntityType, entityPath))).toMap
   }
 
+  def createProduceZnode(topic: String, producer: String, idSeq: Int, total: Int): Unit = {
+    zkClient.initCreateProduceZnode(topic, producer, idSeq, total)
+  }
+
 }
 
