@@ -22,6 +22,7 @@ import java.util.Locale
 import java.util.concurrent.locks.{ReentrantLock, ReentrantReadWriteLock}
 import java.util.concurrent._
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.yammer.metrics.core.{Gauge, MetricName}
 import kafka.metrics.KafkaMetricsGroup
 import kafka.utils.CoreUtils.{inLock, inReadLock, inWriteLock}
@@ -448,6 +449,22 @@ class ZooKeeperClient(connectString: String,
           }
       }
     }
+  }
+
+  def createProduceZnode(topic: String, producer: String, idSeq: Int, total: Int): Unit = {
+    info(topic + producer + idSeq + total)
+    val pathByProducer = "/brokers/topics/" + topic + "/" + producer
+    val pathByRecord = pathByProducer + "/" + idSeq
+    if ((zooKeeper.exists(pathByProducer, false) == null)) {
+      info("Caminho core do produtor %s para o tópico %s não existe. Criar.".format(
+        producer, topic))
+      zooKeeper.create(pathByProducer, "".getBytes(), ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT)
+
+    } else {
+      info("Caminho existente.")
+    }
+    zooKeeper.create(pathByRecord, "".getBytes(), ZooDefs.Ids.OPEN_ACL_UNSAFE,
+      CreateMode.PERSISTENT)
   }
 }
 

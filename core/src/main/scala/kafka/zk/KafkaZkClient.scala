@@ -1793,6 +1793,10 @@ class KafkaZkClient private[zk] (zooKeeperClient: ZooKeeperClient, isSecure: Boo
       }
     }
   }
+
+  def initCreateProduceZnode(topic: String, producer: String, idSeq: Int, total: Int): Unit = {
+    zooKeeperClient.createProduceZnode(topic, producer, idSeq, total)
+  }
 }
 
 object KafkaZkClient {

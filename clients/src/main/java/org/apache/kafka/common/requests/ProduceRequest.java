@@ -45,9 +45,7 @@ import java.util.Map;
 import static org.apache.kafka.common.protocol.CommonFields.NULLABLE_TRANSACTIONAL_ID;
 import static org.apache.kafka.common.protocol.CommonFields.PARTITION_ID;
 import static org.apache.kafka.common.protocol.CommonFields.TOPIC_NAME;
-import static org.apache.kafka.common.protocol.types.Type.INT16;
-import static org.apache.kafka.common.protocol.types.Type.INT32;
-import static org.apache.kafka.common.protocol.types.Type.RECORDS;
+import static org.apache.kafka.common.protocol.types.Type.*;
 
 public class ProduceRequest extends AbstractRequest {
     private static final String ACKS_KEY_NAME = "acks";
@@ -60,8 +58,10 @@ public class ProduceRequest extends AbstractRequest {
     // partition level field names
     private static final String RECORD_SET_KEY_NAME = "record_set";
 
+    // Adicionados para serem utilizados com ack -2
     private static final String MESSAGE_ID = "message_id";
     private static final String TOTAL_MESSAGE = "count_message";
+    private static final String DESTINY_NAME = "destiny_name";
 
     private static final Schema TOPIC_PRODUCE_DATA_V0 = new Schema(
             TOPIC_NAME,
@@ -98,7 +98,8 @@ public class ProduceRequest extends AbstractRequest {
             new Field(TIMEOUT_KEY_NAME, INT32, "The time to await a response in ms."),
             new Field(TOPIC_DATA_KEY_NAME, new ArrayOf(TOPIC_PRODUCE_DATA_V0)),
             new Field(MESSAGE_ID, INT32, "Posição da mensagem enviada do total."),
-            new Field(TOTAL_MESSAGE, INT32, "Total de mensagens a serem enviadas"));
+            new Field(TOTAL_MESSAGE, INT32, "Total de mensagens a serem enviadas"),
+            new Field(DESTINY_NAME, STRING, "Identificação do destino da mensagem."));
 
     /**
      * The body of PRODUCE_REQUEST_V4 is the same as PRODUCE_REQUEST_V3.
@@ -137,11 +138,13 @@ public class ProduceRequest extends AbstractRequest {
 
         private final int message;
         private final int total;
+        private final String destiny;
 
         public static Builder forCurrentMagic(short acks,
                                               int timeout,
                                               Map<TopicPartition, MemoryRecords> partitionRecords) {
-            return forMagic(RecordBatch.CURRENT_MAGIC_VALUE, acks, timeout, partitionRecords, null, 0 , 0);
+            return forMagic(RecordBatch.CURRENT_MAGIC_VALUE, acks, timeout, partitionRecords, null,
+                    0 , 0, null);
         }
 
         public static Builder forMagic(byte magic,
@@ -171,7 +174,8 @@ public class ProduceRequest extends AbstractRequest {
                                        Map<TopicPartition, MemoryRecords> partitionRecords,
                                        String transactionalId,
                                        int message,
-                                       int total) {
+                                       int total,
+                                       String destiny) {
             // Message format upgrades correspond with a bump in the produce request version. Older
             // message format versions are generally not supported by the produce request versions
             // following the bump.
@@ -186,7 +190,7 @@ public class ProduceRequest extends AbstractRequest {
                 maxVersion = ApiKeys.PRODUCE.latestVersion();
             }
             return new Builder(minVersion, maxVersion, acks, timeout, partitionRecords, transactionalId,
-                    message, total);
+                    message, total, destiny);
         }
 
         public Builder(short minVersion,
@@ -196,7 +200,8 @@ public class ProduceRequest extends AbstractRequest {
                        Map<TopicPartition, MemoryRecords> partitionRecords,
                        String transactionalId,
                        int message,
-                       int total) {
+                       int total,
+                       String destiny) {
             super(ApiKeys.PRODUCE, minVersion, maxVersion);
             this.acks = acks;
             this.timeout = timeout;
@@ -204,6 +209,7 @@ public class ProduceRequest extends AbstractRequest {
             this.transactionalId = transactionalId;
             this.message = message;
             this.total = total;
+            this.destiny = destiny;
         }
 
         public Builder(short minVersion,
@@ -219,6 +225,7 @@ public class ProduceRequest extends AbstractRequest {
             this.transactionalId = transactionalId;
             this.message = 0;
             this.total = 0;
+            this.destiny = null;
         }
 
         @Override
@@ -238,7 +245,8 @@ public class ProduceRequest extends AbstractRequest {
                     ProduceRequest.validateRecords(version, records);
                 }
             }
-            return new ProduceRequest(version, acks, timeout, partitionRecords, transactionalId, message, total);
+            return new ProduceRequest(version, acks, timeout, partitionRecords, transactionalId,
+                    message, total, destiny);
         }
 
         @Override
@@ -261,6 +269,7 @@ public class ProduceRequest extends AbstractRequest {
 
     private final int message;
     private final int total;
+    private final String destiny;
 
     // This is set to null by `clearPartitionRecords` to prevent unnecessary memory retention when a produce request is
     // put in the purgatory (due to client throttling, it can take a while before the response is sent).
@@ -270,7 +279,7 @@ public class ProduceRequest extends AbstractRequest {
     private boolean hasIdempotentRecords = false;
 
     private ProduceRequest(short version, short acks, int timeout, Map<TopicPartition, MemoryRecords> partitionRecords, String transactionalId,
-                           int message, int total) {
+                           int message, int total, String destiny) {
         super(ApiKeys.PRODUCE, version);
         this.acks = acks;
         this.timeout = timeout;
@@ -281,6 +290,7 @@ public class ProduceRequest extends AbstractRequest {
 
         this.message = message;
         this.total = total;
+        this.destiny = destiny;
 
         for (MemoryRecords records : partitionRecords.values()) {
             setFlags(records);
@@ -315,6 +325,7 @@ public class ProduceRequest extends AbstractRequest {
 
         message = struct.getInt(MESSAGE_ID);
         total = struct.getInt(TOTAL_MESSAGE);
+        destiny = struct.getString(DESTINY_NAME);
     }
 
     private void setFlags(MemoryRecords records) {
@@ -340,6 +351,7 @@ public class ProduceRequest extends AbstractRequest {
 
         struct.set(MESSAGE_ID, message);
         struct.set(TOTAL_MESSAGE, total);
+        struct.set(DESTINY_NAME, destiny);
 
         List<Struct> topicDatas = new ArrayList<>(recordsByTopic.size());
         for (Map.Entry<String, Map<Integer, MemoryRecords>> topicEntry : recordsByTopic.entrySet()) {
@@ -443,6 +455,8 @@ public class ProduceRequest extends AbstractRequest {
     public int getMessage() {
         return message;
     }
+
+    public String getDestiny() { return destiny; }
 
     /**
      * Returns the partition records or throws IllegalStateException if clearPartitionRecords() has been invoked.
