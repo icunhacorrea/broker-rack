@@ -453,12 +453,13 @@ class ZooKeeperClient(connectString: String,
 
   def createProduceZnode(topic: String, producer: String, idSeq: Int, total: Int): Unit = {
     info(topic + " " + producer + " " + idSeq + " " + total)
-    val pathByProducer = "/brokers/topics/" + topic + "/" + producer
-    val pathByRecord = pathByProducer + "/" + idSeq
-    if ((zooKeeper.exists(pathByProducer, false) == null)) {
+    val pathByNode = "/brokers/topics/" + topic + "/node-" + zooKeeper.getSessionId
+    val pathByRecord = pathByNode + "/" + idSeq
+    if ((zooKeeper.exists(pathByNode, false) == null)) {
+
       info("Caminho core do produtor %s para o tópico %s não existe. Criar.".format(
         producer, topic))
-      zooKeeper.create(pathByProducer, "".getBytes(), ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT)
+      zooKeeper.create(pathByNode, "".getBytes(), ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT)
 
     } else {
       info("Caminho existente.")
