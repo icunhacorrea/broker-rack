@@ -451,21 +451,23 @@ class ZooKeeperClient(connectString: String,
     }
   }
 
+  var pathByNode = ""
+  var data = ""
+
   def createProduceZnode(topic: String, producer: String, idSeq: Int, total: Int): Unit = {
-    info(topic + " " + producer + " " + idSeq + " " + total)
-    val pathByNode = "/brokers/topics/" + topic + "/node-" + zooKeeper.getSessionId
-    val pathByRecord = pathByNode + "/" + idSeq
-    if ((zooKeeper.exists(pathByNode, false) == null)) {
+    var version = 0
+    data = producer + ";" + topic + ";" + idSeq
+    if (pathByNode == "")
+      pathByNode = "/brokers/topics/" + topic + "/node-" + zooKeeper.getSessionId
 
-      info("Caminho core do produtor %s para o tópico %s não existe. Criar.".format(
-        producer, topic))
+    var stat = zooKeeper.exists(pathByNode, false)
+    if (stat == null) {
       zooKeeper.create(pathByNode, "".getBytes(), ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT)
-
     } else {
-      info("Caminho existente.")
+      version = stat.getVersion
     }
-    zooKeeper.create(pathByRecord, "".getBytes(), ZooDefs.Ids.OPEN_ACL_UNSAFE,
-      CreateMode.PERSISTENT)
+    info("Inserindo valor: " + data)
+    zooKeeper.setData(pathByNode, data.getBytes, version)
   }
 }
 
