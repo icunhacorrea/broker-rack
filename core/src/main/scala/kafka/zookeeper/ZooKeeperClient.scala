@@ -455,7 +455,6 @@ class ZooKeeperClient(connectString: String,
   var data = ""
 
   def createProduceZnode(topic: String, producer: String, idSeq: Int, total: Int): Unit = {
-    var version = 0
     data = producer + ";" + topic + ";" + idSeq
     if (pathByNode == "")
       pathByNode = "/brokers/topics/" + topic + "/node-" + zooKeeper.getSessionId
@@ -463,11 +462,9 @@ class ZooKeeperClient(connectString: String,
     var stat = zooKeeper.exists(pathByNode, false)
     if (stat == null) {
       zooKeeper.create(pathByNode, "".getBytes(), ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT)
-    } else {
-      version = stat.getVersion
     }
     info("Inserindo valor: " + data)
-    zooKeeper.setData(pathByNode, data.getBytes, version)
+    stat = zooKeeper.setData(pathByNode, data.getBytes, stat.getVersion)
   }
 }
 
