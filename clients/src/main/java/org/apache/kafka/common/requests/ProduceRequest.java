@@ -225,7 +225,7 @@ public class ProduceRequest extends AbstractRequest {
             this.transactionalId = transactionalId;
             this.message = 0;
             this.total = 0;
-            this.destiny = null;
+            this.destiny = "";
         }
 
         @Override
