@@ -455,18 +455,18 @@ class KafkaApis(val requestChannel: RequestChannel,
    */
 
 
-   var countProducesRequests = 0;
+  //var countProducesRequests = 0;
 
   def handleProduceRequest(request: RequestChannel.Request) {
     val produceRequest = request.body[ProduceRequest]
     val numBytesAppended = request.header.toStruct.sizeOf + request.sizeOfBodyInBytes
 
-    countProducesRequests += 1
+    /*countProducesRequests += 1
     info("*****************************************************************")
     info("Quantidade de Produces Requests: " + countProducesRequests)
     info(produceRequest.toString)
     info(request.header.toString)
-    info("*****************************************************************")
+    info("*****************************************************************")*/
 
     if (produceRequest.hasTransactionalRecords) {
       val isAuthorizedTransactional = produceRequest.transactionalId != null &&
