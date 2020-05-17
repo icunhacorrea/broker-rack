@@ -452,25 +452,11 @@ class ZooKeeperClient(connectString: String,
   }
 
   var pathByNode = ""
-  var data = ""
-
 
   def createProduceZnode(topic: String, producer: String, idSeq: Int, total: Int): Unit = {
-    data = producer + ";" + topic + ";" + idSeq
     if (pathByNode == "")
-      pathByNode = "/brokers/topics/" + topic + "/node-" + zooKeeper.getSessionId
-
-    var stat = zooKeeper.exists(pathByNode, false)
-    if (stat == null) {
-      zooKeeper.create(pathByNode, "".getBytes(), ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT)
-    }
-    // Cria aqui znode do arquivo.
-    info("Inserindo valor: " + data)
-    stat = zooKeeper.exists(pathByNode + "/" + idSeq, false)
-    if(stat != null) {
-      zooKeeper.delete(pathByNode+ "/" + idSeq, stat.getVersion)
-    }
-    zooKeeper.create(pathByNode + "/" + idSeq, "".getBytes(), ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+      pathByNode = "/brokers/topics/" + topic + "/node-" + zooKeeper.getSessionId + "-"
+    zooKeeper.create(pathByNode, idSeq.toString.getBytes(), ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT_SEQUENTIAL)
   }
 }
 
