@@ -551,6 +551,7 @@ class KafkaApis(val requestChannel: RequestChannel,
           )
           closeConnection(request, new ProduceResponse(mergedResponseStatus.asJava).errorCounts)
         } else {
+          sendNoOpResponseExemptThrottle(request)
           // Note that although request throttling is exempt for acks == 0, the channel may be throttled due to
           // bandwidth quota violation.
           // TODO Adição do increment na tupla (OK)
@@ -560,7 +561,6 @@ class KafkaApis(val requestChannel: RequestChannel,
             adminZkClient.createProduceZnode(produceRequest.getDestiny() ,request.header.clientId(),
               produceRequest.getMessage(), produceRequest.getTotal());
           }
-          sendNoOpResponseExemptThrottle(request)
         }
       } else {
         sendResponse(request, Some(new ProduceResponse(mergedResponseStatus.asJava, maxThrottleTimeMs)), None)
