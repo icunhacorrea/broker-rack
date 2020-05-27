@@ -451,13 +451,12 @@ class ZooKeeperClient(connectString: String,
     }
   }
 
-  var pathByNode = ""
-
   def createProduceZnode(topic: String, producer: String, idSeq: Int, total: Int): Unit = {
-    if (pathByNode == "")
-      pathByNode = "/brokers/topics/" + topic + "/node-" + zooKeeper.getSessionId + "-"
     val data = idSeq.toString + ";" + total.toString
-    zooKeeper.create(pathByNode, data.getBytes(), ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL_SEQUENTIAL)
+    val stat = new Stat()
+    info("Chegando aqui: " + data)
+    zooKeeper.create("/brokers/topics/" + topic + "/produce-" + idSeq.toString, data.getBytes(), ZooDefs.Ids.OPEN_ACL_UNSAFE,
+                    CreateMode.PERSISTENT_SEQUENTIAL_WITH_TTL, stat, 10000)
   }
 }
 
