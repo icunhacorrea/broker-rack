@@ -457,7 +457,7 @@ class ZooKeeperClient(connectString: String,
     if (pathByNode == "")
       pathByNode = "/brokers/topics/" + topic + "/node-" + zooKeeper.getSessionId + "-"
     val data = idSeq.toString + ";" + total.toString
-    zooKeeper.create(pathByNode, data.getBytes(), ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT_SEQUENTIAL)
+    zooKeeper.create(pathByNode, data.getBytes(), ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL_SEQUENTIAL)
   }
 }
 
