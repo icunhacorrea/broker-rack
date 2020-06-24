@@ -776,9 +776,10 @@ public class Sender implements Runnable {
 
     /**
      * Transfer the record batches into a list of produce requests on a per-node basis
+	 *
      */
     private void sendProduceRequests(Map<Integer, List<ProducerBatch>> collated, long now) {
-        for (Map.Entry<Integer, List<ProducerBatch>> entry : collated.entrySet())
+        for (Map.Entry<Integer, List<ProducerBatch>> entry : collated.entrySet()) 
             sendProduceRequest(now, entry.getKey(), acks, requestTimeoutMs, entry.getValue());
     }
 
@@ -788,9 +789,6 @@ public class Sender implements Runnable {
     private void sendProduceRequest(long now, int destination, short acks, int timeout, List<ProducerBatch> batches) {
         if (batches.isEmpty())
             return;
-
-        // Contador de ProducesRequests.
-        countRequests++;
 
         Map<TopicPartition, MemoryRecords> produceRecordsByPartition = new HashMap<>(batches.size());
         final Map<TopicPartition, ProducerBatch> recordsByPartition = new HashMap<>(batches.size());
@@ -834,7 +832,10 @@ public class Sender implements Runnable {
 
         ProduceRequest.Builder requestBuilder = null;
         if (acks == -2) {
-            requestBuilder = ProduceRequest.Builder.forMagic(minUsedMagic, acks, timeout,
+			// Contador de ProducesRequests.
+			countRequests++;
+			System.out.println("CountRequests: " + countRequests);
+	    	requestBuilder = ProduceRequest.Builder.forMagic(minUsedMagic, acks, timeout,
                     produceRecordsByPartition, transactionalId, countRequests, qntRecords, topicName);
         } else {
             requestBuilder = ProduceRequest.Builder.forMagic(minUsedMagic, acks, timeout,
