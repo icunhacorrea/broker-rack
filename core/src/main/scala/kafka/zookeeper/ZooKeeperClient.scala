@@ -451,15 +451,11 @@ class ZooKeeperClient(connectString: String,
     }
   }
 
-  var count = 0
-
   def createProduceZnode(topic: String, producer: String, idSeq: Int, total: Int): Unit = {
     val data = idSeq.toString + ";" + total.toString
     val stat = new Stat()
-    count+=1
-    info("Mensagem: " + "(" + idSeq + "/" + total + ")" + " Count: " + count)
     zooKeeper.create("/brokers/topics/" + topic + "/produce-", data.getBytes(), ZooDefs.Ids.OPEN_ACL_UNSAFE,
-                    CreateMode.PERSISTENT_SEQUENTIAL_WITH_TTL, stat, 180000)
+                    CreateMode.PERSISTENT_SEQUENTIAL_WITH_TTL, stat, 120000)
   }
 }
 

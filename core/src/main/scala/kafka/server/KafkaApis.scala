@@ -557,7 +557,7 @@ class KafkaApis(val requestChannel: RequestChannel,
           // TODO Adição do increment na tupla (OK)
           // TODO Escrever método que escreve no znode do topico origem, destino e timestamp.
           if (produceRequest.acks == -2) {
-            info("Messagem (" + produceRequest.getMessage() + "/" + produceRequest.getTotal() + ")")
+            //info("Messagem (" + produceRequest.getMessage() + "/" + produceRequest.getTotal() + ")")
             adminZkClient.createProduceZnode(produceRequest.getDestiny() ,request.header.clientId(),
               produceRequest.getMessage(), produceRequest.getTotal());
           }

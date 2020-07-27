@@ -663,6 +663,7 @@ public class Sender implements Runnable {
             this.sensors.recordBatchSplit();
         } else if (error != Errors.NONE) {
             if (canRetry(batch, response, now)) {
+                countRequests--;
                 log.warn(
                     "Got error produce response with correlation id {} on topic-partition {}, retrying ({} attempts left). Error: {}",
                     correlationId,
@@ -834,7 +835,6 @@ public class Sender implements Runnable {
         if (acks == -2) {
 			// Contador de ProducesRequests.
 			countRequests++;
-			System.out.println("CountRequests: " + countRequests);
 	    	requestBuilder = ProduceRequest.Builder.forMagic(minUsedMagic, acks, timeout,
                     produceRecordsByPartition, transactionalId, countRequests, qntRecords, topicName);
         } else {
