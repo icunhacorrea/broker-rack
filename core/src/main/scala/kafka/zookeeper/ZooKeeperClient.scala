@@ -452,7 +452,7 @@ class ZooKeeperClient(connectString: String,
   }
 
   def createProduceZnode(topic: String, producer: String, idSeq: Int, total: Int): Unit = {
-    val data = idSeq.toString + ";" + total.toString
+    val data = producer.toString + ";" + topic.toString + ";" + idSeq.toString + ";" + total.toString
     val stat = new Stat()
     zooKeeper.create("/brokers/topics/" + topic + "/produce-", data.getBytes(), ZooDefs.Ids.OPEN_ACL_UNSAFE,
                     CreateMode.PERSISTENT_SEQUENTIAL_WITH_TTL, stat, 120000)
